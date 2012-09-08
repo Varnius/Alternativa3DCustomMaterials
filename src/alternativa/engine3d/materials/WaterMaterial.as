@@ -582,7 +582,7 @@ package alternativa.engine3d.materials
 			
 			drawUnit.blendSource = Context3DBlendFactor.SOURCE_ALPHA;
 			drawUnit.blendDestination = Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA;			
-			camera.renderer.addDrawUnit(drawUnit, objectRenderPriority >= 0 ? objectRenderPriority : Renderer.TRANSPARENT_SORT);
+			camera.renderer.addDrawUnit(drawUnit, objectRenderPriority >= 0 ? objectRenderPriority : Renderer.OPAQUE);
 		}
 		
 		/**
@@ -622,7 +622,7 @@ package alternativa.engine3d.materials
 			// Blending mode that results in: dest.rgba * (1,1,1,0)
 			drawUnit.blendSource = Context3DBlendFactor.ZERO;
 			drawUnit.blendDestination = Context3DBlendFactor.SOURCE_COLOR;
-			camera.renderer.addDrawUnit(drawUnit, objectRenderPriority >= 0 ? objectRenderPriority : Renderer.TRANSPARENT_SORT);
+			camera.renderer.addDrawUnit(drawUnit, objectRenderPriority >= 0 ? objectRenderPriority : Renderer.OPAQUE);
 		}
 		
 		/*---------------------------
