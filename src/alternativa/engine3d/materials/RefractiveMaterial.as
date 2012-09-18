@@ -97,7 +97,6 @@ package alternativa.engine3d.materials
 		Public methods
 		---------------------------*/
 		
-		private var pos:Vector3D = new Vector3D();
 		private var prevReflectionTextureSize:int = 0;
 		
 		/**
