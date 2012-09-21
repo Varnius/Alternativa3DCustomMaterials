@@ -22,14 +22,15 @@ package alternativa.engine3d.materials
 	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DProgramType;
 	import flash.display3D.VertexBuffer3D;
-	import flash.geom.Vector3D;
 	import flash.utils.Dictionary;
 	import flash.utils.getDefinitionByName;
 	
 	use namespace alternativa3d;
 	
 	/**
-	 * Represents refractive material.
+	 * Refractive material.
+	 * 
+	 * @author Varnius
 	 */
 	public class RefractiveMaterial extends Material
 	{		
@@ -37,9 +38,7 @@ package alternativa.engine3d.materials
 		
 		private static var caches:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;		
-		private var programsCache:Dictionary;		
-		
-		// Maps
+		private var programsCache:Dictionary;
 		
 		/**
 		 * Diffuse map.
@@ -49,10 +48,9 @@ package alternativa.engine3d.materials
 		/**
 		 * Normal map.
 		 */
-		public var normalMap:TextureResource;		
-		alternativa3d var refractionMap:RawTextureResource;		
+		public var normalMap:TextureResource;	
 		
-		// Material properties
+		alternativa3d var refractionMap:RawTextureResource;
 		
 		/**
 		 * Refraction amount in range [0, 1]. Used to mix refraction and diffuse maps.
@@ -260,8 +258,8 @@ package alternativa.engine3d.materials
 		 * Create material program.
 		 */
 		private function getProgram(object:Object3D, 
-									   programs:Dictionary,
-									   camera:Camera3D
+									programs:Dictionary,
+									camera:Camera3D
 		):RefractiveMaterialProgram
 		{
 			var key:String = refractiveRenderPass ? "refractivePass1" : "refractivePass2";

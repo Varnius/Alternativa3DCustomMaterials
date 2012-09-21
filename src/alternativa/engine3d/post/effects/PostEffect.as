@@ -13,6 +13,11 @@ package alternativa.engine3d.post.effects
 	
 	use namespace alternativa3d;
 
+	/**
+	 * Base class for all post effects.
+	 * 
+	 * @author Varnius
+	 */
 	public class PostEffect
 	{
 		/**
@@ -40,8 +45,11 @@ package alternativa.engine3d.post.effects
 		 * @private
 		 * Camera overlay to render effect to.
 		 */
-		alternativa3d var overlay:CameraOverlay = new CameraOverlay();
+		public var overlay:CameraOverlay = new CameraOverlay();
 		
+		/**
+		 * @private
+		 */
 		public function PostEffect()
 		{
 			// ..

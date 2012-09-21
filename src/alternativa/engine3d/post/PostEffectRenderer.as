@@ -11,7 +11,9 @@ package alternativa.engine3d.post
 	use namespace alternativa3d;
 
 	/**
-	 * The PostRenderer class is used to render post processing effects such as glow.
+	 * The PostRenderer class is used to render post processing effects such as MappedGlow and OuterGlow.
+	 * 
+	 * @author Varnius
 	 */
 	public class PostEffectRenderer
 	{
@@ -54,7 +56,7 @@ package alternativa.engine3d.post
 				curr.effect = effect;
 				effects[camera] = curr;
 				
-				// Create and apply new camera overlay
+				// Apply camera overlay
 				camera.addChild(effect.overlay);
 				effect.upload(stage3D.context3D);
 			}
@@ -68,6 +70,8 @@ package alternativa.engine3d.post
 				
 				curr.next = new EffectList();
 				curr.next.effect = effect;
+				camera.addChild(effect.overlay);
+				effect.upload(stage3D.context3D);
 			}
 		}
 		
@@ -81,28 +85,25 @@ package alternativa.engine3d.post
 		{
 			var curr:EffectList = effects[camera];
 			var prev:EffectList = curr;
-			
-			if(curr != null)
-			{				
-				while(curr != null)
+						
+			while(curr != null)
+			{
+				if(curr.effect == effect)
 				{
-					if(curr.effect == effect)
+					if(prev == curr)
 					{
-						if(prev == curr)
-						{
-							effects[camera] = curr.next;
-							curr.effect.dispose();
-						}
-						else
-						{
-							prev.next = curr.next;
-							curr.effect.dispose();
-						}
+						effects[camera] = curr.next;
+						curr.effect.dispose();
 					}
-					
-					prev = curr;
-					curr = curr.next;
+					else
+					{
+						prev.next = curr.next;
+						curr.effect.dispose();
+					}
 				}
+				
+				prev = curr;
+				curr = curr.next;
 			}
 		}
 		
@@ -114,14 +115,11 @@ package alternativa.engine3d.post
 		public function removeAllEffects(camera:Camera3D):void
 		{		
 			var curr:EffectList = effects[camera];
-			
-			if(curr != null)
-			{				
-				while(curr != null)
-				{
-					curr.effect.dispose();
-					curr = curr.next;
-				}
+							
+			while(curr != null)
+			{
+				curr.effect.dispose();
+				curr = curr.next;
 			}
 			
 			effects[camera] = null;
@@ -137,18 +135,15 @@ package alternativa.engine3d.post
 		{
 			var curr:EffectList = effects[camera];
 			
-			if(curr != null)
+			while(curr != null)
 			{
-				while(curr != null)
+				if(curr.effect == effect)
 				{
-					if(curr.effect == effect)
-					{
-						curr.effect.update(stage3D, camera);
-						break;
-					}
-					
-					curr = curr.next;
+					curr.effect.update(stage3D, camera);
+					break;
 				}
+				
+				curr = curr.next;
 			}
 		}
 		
@@ -161,13 +156,10 @@ package alternativa.engine3d.post
 		{
 			var curr:EffectList = effects[camera];
 			
-			if(curr != null)
+			while(curr != null)
 			{
-				while(curr != null)
-				{
-					curr.effect.update(stage3D, camera);
-					curr = curr.next;
-				}
+				curr.effect.update(stage3D, camera);
+				curr = curr.next;
 			}
 		}
 		

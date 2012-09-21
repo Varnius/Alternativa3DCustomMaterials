@@ -3,7 +3,7 @@ package alternativa.engine3d.materials
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
 	import alternativa.engine3d.core.DrawUnit;
-	import alternativa.engine3d.core.FilterRenderer;
+	import alternativa.engine3d.core.MappedGlowRenderer;
 	import alternativa.engine3d.core.Light3D;
 	import alternativa.engine3d.core.Object3D;
 	import alternativa.engine3d.core.Renderer;
@@ -27,7 +27,7 @@ package alternativa.engine3d.materials
 	use namespace alternativa3d;
 	
 	/**
-	 * Glow material.
+	 * Mapped glow material. Apply this material to an object and then use <code>PostEffectRenderer</code> with <code>MappedGlow</code> effect to output final glow.
 	 */
 	public class MappedGlowMaterial extends Material
 	{		
@@ -57,7 +57,7 @@ package alternativa.engine3d.materials
 		alternativa3d static var glowRenderPass:Boolean = false;		
 		
 		/**
-		 * Creates an instance of GlowMaterial.
+		 * Returns a new instance of this material.
 		 * 
 		 * @param diffuseMap Diffuse map.
 		 * @param glowMap Map that marks areas that should glow.
@@ -93,8 +93,7 @@ package alternativa.engine3d.materials
 													 lightsLength:int,
 													 useShadow:Boolean, 
 													 objectRenderPriority:int = -1):void
-		{
-			
+		{			
 			if(diffuseMap == null || diffuseMap._texture == null || glowMap == null || glowMap._texture == null)
 			{
 				return;
@@ -304,7 +303,7 @@ package alternativa.engine3d.materials
 			}
 			
 			var object:Object3D = surface.object;
-			var renderer:FilterRenderer = camera.renderer as FilterRenderer;
+			var renderer:MappedGlowRenderer = camera.renderer as MappedGlowRenderer;
 			
 			// Create draw unit
 			var drawUnit:DrawUnit = renderer.createGlowDrawUnit(object, program.program, geometry._indexBuffer, surface.indexBegin, surface.numTriangles, program);

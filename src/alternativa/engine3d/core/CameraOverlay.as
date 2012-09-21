@@ -15,21 +15,21 @@ package alternativa.engine3d.core
 	
 	use namespace alternativa3d;
 	
+	/**
+	 * @private
+	 */
 	public class CameraOverlay extends Object3D
 	{	
-		private static const cachedPrograms:Dictionary = new Dictionary(true);		
-		private var cachedContext3D:Context3D;
+		private static var caches:Dictionary = new Dictionary(true);
+		private var cachedContext3D:Context3D;		
+		private var cachedPrograms:Dictionary;	
 		
 		alternativa3d var geometry:Geometry = new Geometry(4);
 		alternativa3d var diffuseMap:Texture;
+		alternativa3d var maskMap:Texture;
 		alternativa3d var blendAmount:Number = 1.0;
 		alternativa3d var blendFactorSource:String = Context3DBlendFactor.SOURCE_ALPHA;
 		alternativa3d var blendFactorDestination:String = Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA;
-		
-		/**
-		 * @private
-		 */
-		alternativa3d var shaderProgram:OverlayShaderProgram;
 		
 		// Geometry stream attributes
 		private var attributes:Array =
@@ -80,25 +80,32 @@ package alternativa.engine3d.core
 			if(diffuseMap == null)
 			{
 				return;
-			}
+			}			
 			
-			// Update cached context3D and program when context3D changes
+			// Refresh cache if context3D cahnges
 			if(camera.context3D != cachedContext3D)
 			{
 				cachedContext3D = camera.context3D;
-				shaderProgram = cachedPrograms[cachedContext3D];
+				cachedPrograms = caches[cachedContext3D];
 				
-				if(shaderProgram == null)
+				if(cachedPrograms == null)
 				{
-					shaderProgram = getProgram();
-					shaderProgram.upload(cachedContext3D);
-					cachedPrograms[cachedContext3D] = shaderProgram;
+					cachedPrograms = new Dictionary();
+					caches[cachedContext3D] = cachedPrograms;
 				}
-			}			
+			}	
+			
+			// Get program
+			var shaderProgram:OverlayShaderProgram = getProgram(caches[cachedContext3D] as Dictionary);
 			
 			// Get buffers
 			var positionBuffer:VertexBuffer3D = geometry.getVertexBuffer(VertexAttributes.POSITION);
 			var uvBuffer:VertexBuffer3D = geometry.getVertexBuffer(VertexAttributes.TEXCOORDS[0]);
+			
+			if(positionBuffer == null || uvBuffer == null)
+			{
+				return;
+			}
 			
 			var drawUnit:DrawUnit = camera.renderer.createDrawUnit(this, shaderProgram.program, geometry._indexBuffer, 0, 2);
 			
@@ -107,29 +114,53 @@ package alternativa.engine3d.core
 			drawUnit.setVertexBufferAt(shaderProgram.aUV, uvBuffer, geometry._attributesOffsets[VertexAttributes.TEXCOORDS[0]], VertexAttributes.FORMATS[VertexAttributes.TEXCOORDS[0]]);
 			
 			// Set fragment constants
-			drawUnit.setFragmentConstantsFromNumbers(shaderProgram.cAmount, blendAmount, 0,0,0);
+			// w used for storing constant 1
+			drawUnit.setFragmentConstantsFromNumbers(shaderProgram.cAmount, blendAmount, 0, 0, 1);		
 			
 			// Set samplers
 			drawUnit.setTextureAt(shaderProgram.sDiffuseMap, diffuseMap);
+			
+			if(maskMap != null)
+			{
+				drawUnit.setTextureAt(shaderProgram.sMaskMap, maskMap);
+			}
 			
 			drawUnit.blendSource = blendFactorSource;
 			drawUnit.blendDestination = blendFactorDestination;			
 			camera.renderer.addDrawUnit(drawUnit, /*objectRenderPriority >= 0 ? objectRenderPriority :*/ Renderer.TRANSPARENT_SORT);
 		}
 		
-		private function getProgram():OverlayShaderProgram
+		private function getProgram(programs:Dictionary):OverlayShaderProgram
 		{
-			var vertexLinker:Linker = new Linker(Context3DProgramType.VERTEX);
-			var fragmentLinker:Linker = new Linker(Context3DProgramType.FRAGMENT);
+			var key:String = maskMap == null ? "diffuseProgram" : "maskProgram";
+			var program:OverlayShaderProgram = cachedPrograms[key];
 			
-			// Vertex
-			vertexLinker.addProcedure(vertexProcedure);
+			if(program == null)
+			{
+				var vertexLinker:Linker = new Linker(Context3DProgramType.VERTEX);
+				var fragmentLinker:Linker = new Linker(Context3DProgramType.FRAGMENT);
+				
+				// Vertex
+				vertexLinker.addProcedure(vertexProcedure);
+				
+				// Fragment
+				if(maskMap != null)
+				{
+					fragmentLinker.addProcedure(maskFragmentProcedure);
+				}
+				else 
+				{
+					fragmentLinker.addProcedure(fragmentProcedure);
+				}			
+				
+				fragmentLinker.varyings = vertexLinker.varyings;
+				
+				program = new OverlayShaderProgram(vertexLinker, fragmentLinker);
+				program.upload(cachedContext3D);
+				programs[key] = program;
+			}		
 			
-			// Fragment
-			fragmentLinker.addProcedure(fragmentProcedure);
-			fragmentLinker.varyings = vertexLinker.varyings;
-			
-			return new OverlayShaderProgram(vertexLinker, fragmentLinker);			
+			return program;
 		}
 		
 		/**
@@ -139,6 +170,10 @@ package alternativa.engine3d.core
 			if (geometry != null && (resourceType == null || geometry is resourceType)) resources[geometry] = true;
 			super.fillResources(resources, hierarchy, resourceType);
 		}
+		
+		/*---------------------------
+		Shader procedures
+		---------------------------*/
 		
 		static alternativa3d const vertexProcedure:Procedure = new Procedure(
 		[			
@@ -162,6 +197,28 @@ package alternativa.engine3d.core
 			"mul t0 t0 c0.x",
 			"mov o0, t0"
 		], "fragmentProcedure");
+		
+		static alternativa3d const maskFragmentProcedure:Procedure = new Procedure(
+		[
+			// Declarations
+			"#s0=sDiffuseMap",
+			"#s1=sMaskMap",
+			"#v0=vUV",
+			"#c0=cAmount",
+			
+			// Sample diffuse
+			"tex t0,v0,s0 <2d,repeat,nearest>",
+			// Sample mask
+			"tex t1,v0,s1 <2d,repeat,linear>",
+			// 1 - mask alpha value
+			"sub t1.w c0.w t1.w",
+			// Apply mask
+			"mul t0 t0 t1.w",
+			// Multiply by blend amount
+			"mul t0 t0 c0.x",
+			// Output
+			"mov o0, t0"
+		], "maskFragmentProcedure");
 	}
 }
 import alternativa.engine3d.materials.ShaderProgram;
@@ -179,8 +236,11 @@ class OverlayShaderProgram extends ShaderProgram
 	public var aUV:int = -1;
 	
 	// Fragment
-	public var sDiffuseMap:int = -1;
+	public var sDiffuseMap:int = -1;	
 	public var cAmount:int = -1;
+	
+	// Fragment - mask
+	public var sMaskMap:int = -1;
 	
 	public function OverlayShaderProgram(vertex:Linker, fragment:Linker)
 	{
@@ -198,5 +258,8 @@ class OverlayShaderProgram extends ShaderProgram
 		// Fragment shader
 		sDiffuseMap = fragmentShader.findVariable("sDiffuseMap");
 		cAmount = fragmentShader.findVariable("cAmount");
+		
+		// Fragment - mask
+		sMaskMap = fragmentShader.findVariable("sMaskMap");
 	}
 }

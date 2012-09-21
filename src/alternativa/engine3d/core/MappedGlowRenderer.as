@@ -8,11 +8,11 @@ package alternativa.engine3d.core
 	
 	use namespace alternativa3d;
 	
-	public class FilterRenderer extends Renderer
+	public class MappedGlowRenderer extends Renderer
 	{
 		private var dummyDrawUnit:DrawUnit = new DrawUnit();
 		
-		public function FilterRenderer()
+		public function MappedGlowRenderer()
 		{
 			super();
 		}

@@ -34,6 +34,8 @@ package alternativa.engine3d.materials
 	
 	/**
 	 * Water material.
+	 * 
+	 * @author Varnius
 	 */
 	public class WaterMaterial extends Material
 	{		
@@ -41,9 +43,7 @@ package alternativa.engine3d.materials
 		
 		private static var caches:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;		
-		private var programsCache:Dictionary;		
-		
-		// Maps
+		private var programsCache:Dictionary;
 		
 		/**
 		 * Normal map 1.
@@ -57,8 +57,6 @@ package alternativa.engine3d.materials
 		
 		alternativa3d var refractionMap:RawTextureResource;
 		alternativa3d var reflectionMap:RawTextureResource;	
-		
-		// Water properties
 		
 		/**
 		 * Enable/disable antialiasing when prerendering.
@@ -145,19 +143,20 @@ package alternativa.engine3d.materials
 		public var UVScaleFactor2:Number = 20;		
 		
 		alternativa3d var refractiveRenderPass:Boolean = false;
-		alternativa3d var reflectiveRenderPass:Boolean = false;	
-		private var fresnelCoefs:Vector3D = new Vector3D(0.2, 5, 1 - 0.2);
+		alternativa3d var reflectiveRenderPass:Boolean = false;
+		
 		private static var zeroVector:Vector3D = new Vector3D();
+		private var fresnelCoefs:Vector3D = new Vector3D(0.2, 5, 1 - 0.2);		
 		private var pos:Vector3D = new Vector3D();
 		private var rCamera:Camera3D;
 		private var prevRenderTextureSize:int = 0;	
-		private var lastTime:Number = 0;		
+		private var lastTime:Number = 0;
 		private var currOffset1:Vector3D = new Vector3D();
-		private var currOffset2:Vector3D = new Vector3D();	
+		private var currOffset2:Vector3D = new Vector3D();
 		
 		/**
-		 * Class constructor. One instance of this material can be used to generate water only on one object.
-		 * Call update methods to update material state.
+		 * Creates a new instance of thismaterial. One instance of this material can be used to generate water only on one object.
+		 * The target object should be panar and have a surface normal (in global space) (0,0,1) for all vertices. Call update methods to update material state.
 		 * 
 		 * @param normalMap Normal map 1.
 		 * @param normalMap Normal map 2.

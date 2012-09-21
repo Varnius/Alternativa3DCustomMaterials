@@ -2,7 +2,7 @@ package alternativa.engine3d.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import alternativa.engine3d.core.FilterRenderer;
+	import alternativa.engine3d.core.MappedGlowRenderer;
 	import alternativa.engine3d.core.Renderer;
 	import alternativa.engine3d.materials.MappedGlowMaterial;
 	import alternativa.engine3d.materials.compiler.Linker;
@@ -11,7 +11,6 @@ package alternativa.engine3d.post.effects
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
-	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DProgramType;
 	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.Context3DVertexBufferFormat;
@@ -22,18 +21,18 @@ package alternativa.engine3d.post.effects
 	
 	/**
 	 * Mapped glow effect. Takes all objects with assigned MappedGlowMaterial and applies glow to them.
+	 * 
+	 * @author Varnius
 	 */
 	public class MappedGlow extends PostEffect
 	{
-		// Convolution program cache
-		
-		private static var cachedConvolutionPrograms:Dictionary = new Dictionary(true);
-		
+		// Convolution program cache		
+		private static var cachedConvolutionPrograms:Dictionary = new Dictionary(true);		
 		private var cachedContext3D:Context3D;		
-		private var convolutionProgram:GlowConvolutionProgram;			
+		private var convolutionProgram:GlowConvolutionProgram;		
 		private var prevPrerenderTexWidth:int = 0;
 		private var prevPrerenderTexHeight:int = 0;
-		private var glowRenderer:FilterRenderer = new FilterRenderer();
+		private var glowRenderer:MappedGlowRenderer = new MappedGlowRenderer();
 		private var hOffset:Number;
 		private var vOffset:Number;		
 		
@@ -48,15 +47,18 @@ package alternativa.engine3d.post.effects
 		alternativa3d var glowRenderTarget2:Texture;
 		
 		/**
-		 * Number of glow passes. Increases glow spread. Should be integer and > 0. More passes degrade performance.
+		 * Number of glow passes. Increases glow spread. More passes degrade performance.
 		 */
 		public var numGlowPasses:int = 2;
 		
 		/**
-		 * Glow blending degree.
+		 * Glow blending amount.
 		 */
 		public var blendAmount:Number = 1.0;
 		
+		/**
+		 * Creates a new instance of this effect.
+		 */
 		public function MappedGlow()
 		{
 			blendMode = EffectBlendMode.ADD;
@@ -291,7 +293,7 @@ package alternativa.engine3d.post.effects
 			textureOffsets[25] =  0;
 			textureOffsets[29] =  0;*/
 			
-			// Pass cahnges to overlay
+			// Pass changes to overlay
 			overlay.diffuseMap = glowRenderTarget1;
 			overlay.blendAmount = blendAmount;
 		}
@@ -417,9 +419,6 @@ import alternativa.engine3d.materials.compiler.Linker;
 
 import flash.display3D.Context3D;
 
-/**
- * Used for filtering glow map.
- */
 class GlowConvolutionProgram extends ShaderProgram
 {
 	// Vertex
