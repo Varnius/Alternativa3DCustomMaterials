@@ -1,9 +1,9 @@
-package alternativa.engine3d.materials
+package eu.nekobit.materials
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
 	import alternativa.engine3d.core.DrawUnit;
-	import alternativa.engine3d.core.MappedGlowRenderer;
+	import eu.nekobit.core.renderers.MappedGlowRenderer;
 	import alternativa.engine3d.core.Light3D;
 	import alternativa.engine3d.core.Object3D;
 	import alternativa.engine3d.core.Renderer;
@@ -23,11 +23,15 @@ package alternativa.engine3d.materials
 	import flash.display3D.VertexBuffer3D;
 	import flash.utils.Dictionary;
 	import flash.utils.getDefinitionByName;
+	import alternativa.engine3d.materials.A3DUtils;
+	import alternativa.engine3d.materials.Material;
 	
 	use namespace alternativa3d;
 	
 	/**
 	 * Mapped glow material. Apply this material to an object and then use <code>PostEffectRenderer</code> with <code>MappedGlow</code> effect to output final glow.
+	 * 
+	 * @author Varnius
 	 */
 	public class MappedGlowMaterial extends Material
 	{		

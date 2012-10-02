@@ -1,15 +1,15 @@
-package alternativa.engine3d.post.effects
+package eu.nekobit.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import alternativa.engine3d.core.FilterCamera3D;
 	import alternativa.engine3d.core.Object3D;
-	import alternativa.engine3d.core.View;
 	import alternativa.engine3d.materials.ShaderProgram;
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
-	import alternativa.engine3d.post.EffectBlendMode;
-	import alternativa.engine3d.utils.ObjectList;
+	
+	import eu.nekobit.core.cameras.RenderToTextureCamera;
+	import eu.nekobit.post.EffectBlendMode;
+	import eu.nekobit.utils.ObjectList;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
@@ -29,7 +29,7 @@ package alternativa.engine3d.post.effects
 	 * @author Varnius
 	 */
 	public class OuterGlow extends PostEffect
-	{
+	{		
 		// Program cache		
 		private static var cachedConvolutionPrograms:Dictionary = new Dictionary(true);		
 		private var cachedContext3D:Context3D;			
@@ -44,7 +44,7 @@ package alternativa.engine3d.post.effects
 		private var vOffset:Number;
 		private var prevPrerenderTexWidth:int = 0;
 		private var prevPrerenderTexHeight:int = 0;
-		private var filterCamera:FilterCamera3D = new FilterCamera3D(1, 10);		
+		private var filterCamera:RenderToTextureCamera = new RenderToTextureCamera(1, 10);
 		
 		// Texture offsets for convolution shader
 		private var textureOffsets:Vector.<Number> = new <Number>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -89,9 +89,9 @@ package alternativa.engine3d.post.effects
 		 */
 		public function OuterGlow()
 		{
+			filterCamera.filterObjects = true;
 			blendMode = EffectBlendMode.ADD;
-			filterCamera.view = new View(2, 2);
-			filterCamera.view.backgroundAlpha = 0;		
+			overlay.effect = this;
 		}		
 		
 		/**
@@ -196,13 +196,11 @@ package alternativa.engine3d.post.effects
 			camera.parent.addChild(filterCamera);
 			
 			/*-------------------
-			Render scene pass
+			Render regular scene
 			-------------------*/
 			
-			// Render all glow sources to texture
-			stage3D.context3D.setRenderToTexture(renderTarget3, true);
-			
-			// Use custom camera to draw only objects that have glow applied
+			// Use custom camera to draw only objects that should have glow applied
+			filterCamera.texture = renderTarget3;			
 			filterCamera.render(stage3D);
 			
 			camera.parent.removeChild(filterCamera);
@@ -304,7 +302,12 @@ package alternativa.engine3d.post.effects
 			textureOffsets[13] = 0;
 			textureOffsets[17] = 0;
 			textureOffsets[21] = 0;
-			textureOffsets[25] = 0;		
+			textureOffsets[25] = 0;	
+			
+			// Clean up
+			cachedContext3D.setTextureAt(0, null);
+			stage3D.context3D.setVertexBufferAt(0, null);
+			stage3D.context3D.setVertexBufferAt(1, null);	
 			
 			// Pass changes to overlay
 			// Use mask (alpha channel of glowRenderTarget3) to display only outer glow around the object
@@ -318,7 +321,7 @@ package alternativa.engine3d.post.effects
 		 */
 		override alternativa3d function dispose():void
 		{
-			if(renderTarget1)
+			if(renderTarget1 != null)
 			{
 				renderTarget1.dispose();
 				renderTarget2.dispose();

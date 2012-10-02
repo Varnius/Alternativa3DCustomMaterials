@@ -1,23 +1,44 @@
-package alternativa.engine3d.core
+package eu.nekobit.core.cameras
 {
 	import alternativa.engine3d.alternativa3d;
-	import alternativa.engine3d.utils.ObjectList;
+	import alternativa.engine3d.core.Camera3D;
+	import alternativa.engine3d.core.Debug;
+	import alternativa.engine3d.core.Light3D;
+	import alternativa.engine3d.core.Object3D;
+	import alternativa.engine3d.core.Occluder;
+	import alternativa.engine3d.core.RendererContext3DProperties;
+	import alternativa.engine3d.materials.EncodeDepthMaterial;
+	import alternativa.engine3d.materials.OutputEffect;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
+	import flash.display3D.Context3DTextureFormat;
+	import flash.display3D.textures.Texture;
 	import flash.geom.Vector3D;
 	
 	use namespace alternativa3d;
 	
 	/**
 	 * @private
+	 * Used internally in DepthOfField effect.
 	 */
-	public class FilterCamera3D extends Camera3D
+	public class DepthMapCamera extends Camera3D
 	{
-		alternativa3d var renderOnly:ObjectList;		
-		alternativa3d var filterObjects:Boolean = true;
+		alternativa3d var texWidth:int = 256;
+		alternativa3d var texHeight:int = 256;
+		alternativa3d var prevTexWidth:int = 0;
+		alternativa3d var prevTexHeight:int = 0;	
 		
-		public function FilterCamera3D(nearClipping:Number, farClipping:Number)
+		// Used for getting final depth map
+		alternativa3d var depthMap:Texture;
+		
+		// Used for internal depth map rendering
+		alternativa3d var depthTexture:Texture;	
+		
+		private var encDepthMaterial:EncodeDepthMaterial = new EncodeDepthMaterial();
+		private var decDepthEffect:OutputEffect = new OutputEffect();			
+		
+		public function DepthMapCamera(nearClipping:Number, farClipping:Number)
 		{
 			super(nearClipping, farClipping);
 		}
@@ -60,11 +81,23 @@ package alternativa.engine3d.core
 			}
 			if (context3D != null && view != null && renderer != null && (view.stage != null || view._canvas != null)) {
 				renderer.camera = this;
+				depthRenderer.camera = this;
 				// Projection argument calculating
 				calculateProjection(view._width, view._height);
 				// Preparing to rendering
 				view.configureContext3D(stage3D, context3D, this);
 				// Transformations calculating
+				
+				// If depth texture w/h should be shanged
+				if(texWidth != prevTexWidth || texHeight != prevTexHeight)
+				{
+					if(depthTexture != null)
+					{
+						depthTexture.dispose();
+					}
+					
+					depthTexture = context3D.createTexture(texWidth, texHeight, Context3DTextureFormat.BGRA, true);
+				}				
 				
 				if (transformChanged) composeTransforms();
 				localToGlobalTransform.copy(transform);
@@ -229,49 +262,49 @@ package alternativa.engine3d.core
 									childLights[childLightsLength] = light;
 									childLightsLength++;
 								}
-							}
+							}							
 							
-							// Filter
-							if(renderOnly != null && filterObjects)
-							{
-								if(!shouldRender(root))
-								{
-									root.culling = -1;
-								}
-							}
-							
-							
-							root.collectDraws(this, childLights, childLightsLength, root.useShadow);						
+							//root.collectDraws(this, childLights, childLightsLength, root.useShadow);						
 						}
 						else
-						{
-							// Filter
-							if(renderOnly != null && filterObjects)
-							{
-								if(!shouldRender(root))
-								{
-									root.culling = -1;
-								}
-							}
-							
-							root.collectDraws(this, null, 0, root.useShadow);
+						{							
+							//root.collectDraws(this, null, 0, root.useShadow);
 						}
+						root.collectDepthDraws(this, depthRenderer, encDepthMaterial);
 						
 						// Debug the boundbox
 						if (debug && root.boundBox != null && (checkInDebug(root) & Debug.BOUNDS)) Debug.drawBoundBox(this, root.boundBox, root.localToCameraTransform);
 					}
 					
-					// Filter
-					if(renderOnly != null && filterObjects)
-					{
-						filterChildren(root);
-					}
-					
 					// Gather the draws for children
-					root.collectChildrenDraws(this, lights, lightsLength, root.useShadow);
+					//root.collectChildrenDraws(this, lights, lightsLength, root.useShadow);
+					
+					root.collectChildrenDepthDraws(this, depthRenderer, encDepthMaterial);
 					// Mouse events prosessing
 					view.processMouseEvents(context3D, this);
 					// Render
+					//renderer.render(context3D);
+					
+					context3D.setRenderToTexture(depthTexture, true, 0, 0);
+					if (encDepthMaterial.useNormals) {
+						context3D.clear(1, 0, 0.5, 0.5);
+					} else {
+						context3D.clear(1, 0);
+					}
+					
+					depthRenderer.render(context3D);
+					
+					context3D.setRenderToBackBuffer();
+					context3D.setScissorRectangle(null);
+					
+					decDepthEffect.scaleX = encDepthMaterial.outputScaleX;
+					decDepthEffect.scaleY = encDepthMaterial.outputScaleY;
+					decDepthEffect.depthTexture = depthTexture;
+					decDepthEffect.mode = 2;
+					decDepthEffect.collectQuadDraw(this);			
+
+					context3D.setRenderToTexture(depthMap, true);
+					context3D.clear();
 					renderer.render(context3D);
 				}
 				// Output
@@ -287,66 +320,7 @@ package alternativa.engine3d.core
 			lights.length = 0;
 			childLights.length = 0;
 			occluders.length = 0;
-		}
-		
-		/**
-		 * Check if objects is present in renderOnly list.
-		 */
-		private function shouldRender(object:Object3D):Boolean
-		{
-			var curr:ObjectList = renderOnly;
-			
-			while(curr != null)
-			{
-				if(curr.object == object)
-				{
-					return true;
-				}
-				
-				curr = curr.next;
-			}
-			
-			return false;
-		}
-		
-		/**
-		 * Allow render only objects that are in renderonly list.
-		 */
-		private function filterChildren(root:Object3D):void
-		{
-			var curr:Object3D = root.childrenList;
-			var levelUp:Boolean = false;
-			
-			// Traverse object graph
-			while(curr != null)
-			{
-				if(!levelUp)
-				{
-					if(!shouldRender(curr))
-					{
-						curr.culling = -1;
-					}
-				}
-				
-				// Go one level down
-				if(curr.numChildren > 0 && !levelUp)
-				{
-					curr = curr.childrenList;
-				}
-				// Go right
-				else if(curr.next != null)
-				{
-					curr = curr.next;
-					levelUp = false;
-				}
-				// Go one level up
-				else
-				{
-					curr = curr.parent;
-					levelUp = true;
-				}
-			}
-		}
+		}	
 		
 		static private const stack:Vector.<int> = new Vector.<int>();
 		

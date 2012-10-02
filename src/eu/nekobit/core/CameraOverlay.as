@@ -1,10 +1,19 @@
-package alternativa.engine3d.core
+package eu.nekobit.core
 {
 	import alternativa.engine3d.alternativa3d;
+	import alternativa.engine3d.core.Camera3D;
+	import alternativa.engine3d.core.DrawUnit;
+	import alternativa.engine3d.core.Light3D;
+	import alternativa.engine3d.core.Object3D;
+	import alternativa.engine3d.core.Renderer;
+	import alternativa.engine3d.core.VertexAttributes;
 	import alternativa.engine3d.materials.ShaderProgram;
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
 	import alternativa.engine3d.resources.Geometry;
+	
+	import eu.nekobit.core.renderers.NekoRenderer;
+	import eu.nekobit.post.effects.PostEffect;
 	
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DBlendFactor;
@@ -17,12 +26,16 @@ package alternativa.engine3d.core
 	
 	/**
 	 * @private
+	 * 
+	 * @author Varnius
 	 */
 	public class CameraOverlay extends Object3D
 	{	
 		private static var caches:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;		
-		private var cachedPrograms:Dictionary;	
+		private var cachedPrograms:Dictionary;
+		
+		public var effect:PostEffect;
 		
 		alternativa3d var geometry:Geometry = new Geometry(4);
 		alternativa3d var diffuseMap:Texture;
@@ -80,7 +93,14 @@ package alternativa.engine3d.core
 			if(diffuseMap == null)
 			{
 				return;
-			}			
+			}
+			
+			if(!(camera.renderer is NekoRenderer))
+			{
+				return;
+			}
+			
+			var renderer:NekoRenderer = camera.renderer as NekoRenderer;
 			
 			// Refresh cache if context3D cahnges
 			if(camera.context3D != cachedContext3D)
@@ -107,7 +127,7 @@ package alternativa.engine3d.core
 				return;
 			}
 			
-			var drawUnit:DrawUnit = camera.renderer.createDrawUnit(this, shaderProgram.program, geometry._indexBuffer, 0, 2);
+			var drawUnit:DrawUnit = renderer.createDrawUnit(this, shaderProgram.program, geometry._indexBuffer, 0, 2);
 			
 			// Set vertex/UV attribute streams
 			drawUnit.setVertexBufferAt(shaderProgram.aPosition, positionBuffer, 0, VertexAttributes.FORMATS[VertexAttributes.POSITION]);
@@ -126,8 +146,8 @@ package alternativa.engine3d.core
 			}
 			
 			drawUnit.blendSource = blendFactorSource;
-			drawUnit.blendDestination = blendFactorDestination;			
-			camera.renderer.addDrawUnit(drawUnit, /*objectRenderPriority >= 0 ? objectRenderPriority :*/ Renderer.TRANSPARENT_SORT);
+			drawUnit.blendDestination = blendFactorDestination;
+			renderer.addDrawUnit(drawUnit, NekoRenderer.NEKO_POST_OVERLAY);			
 		}
 		
 		private function getProgram(programs:Dictionary):OverlayShaderProgram

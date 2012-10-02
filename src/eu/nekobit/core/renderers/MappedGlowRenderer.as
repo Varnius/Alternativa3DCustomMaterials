@@ -1,13 +1,20 @@
-package alternativa.engine3d.core
+package eu.nekobit.core.renderers
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.materials.ShaderProgram;
 	
 	import flash.display3D.IndexBuffer3D;
 	import flash.display3D.Program3D;
+	import alternativa.engine3d.core.DrawUnit;
+	import alternativa.engine3d.core.Object3D;
+	import alternativa.engine3d.core.Renderer;
 	
 	use namespace alternativa3d;
 	
+	/**
+	 * @private
+	 * Used internally in MappedGlow effect.
+	 */
 	public class MappedGlowRenderer extends Renderer
 	{
 		private var dummyDrawUnit:DrawUnit = new DrawUnit();

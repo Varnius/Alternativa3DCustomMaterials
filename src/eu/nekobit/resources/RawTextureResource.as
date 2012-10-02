@@ -1,10 +1,11 @@
-package alternativa.engine3d.resources
+package eu.nekobit.resources
 {
 	import alternativa.engine3d.alternativa3d;
 	
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.textures.Texture;
+	import alternativa.engine3d.resources.TextureResource;
 	
 	use namespace alternativa3d;
 	

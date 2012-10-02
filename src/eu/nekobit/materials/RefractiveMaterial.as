@@ -1,4 +1,4 @@
-package alternativa.engine3d.materials
+package eu.nekobit.materials
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
@@ -12,7 +12,7 @@ package alternativa.engine3d.materials
 	import alternativa.engine3d.materials.compiler.VariableType;
 	import alternativa.engine3d.objects.Surface;
 	import alternativa.engine3d.resources.Geometry;
-	import alternativa.engine3d.resources.RawTextureResource;
+	import eu.nekobit.resources.RawTextureResource;
 	import alternativa.engine3d.resources.TextureResource;
 	
 	import avmplus.getQualifiedClassName;
@@ -24,6 +24,8 @@ package alternativa.engine3d.materials
 	import flash.display3D.VertexBuffer3D;
 	import flash.utils.Dictionary;
 	import flash.utils.getDefinitionByName;
+	import alternativa.engine3d.materials.A3DUtils;
+	import alternativa.engine3d.materials.Material;
 	
 	use namespace alternativa3d;
 	

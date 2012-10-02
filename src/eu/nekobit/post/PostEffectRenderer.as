@@ -1,9 +1,10 @@
-package alternativa.engine3d.post
+package eu.nekobit.post
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import alternativa.engine3d.core.CameraOverlay;
-	import alternativa.engine3d.post.effects.PostEffect;
+	
+	import eu.nekobit.core.CameraOverlay;
+	import eu.nekobit.post.effects.PostEffect;
 	
 	import flash.display.Stage3D;
 	import flash.utils.Dictionary;
@@ -11,7 +12,7 @@ package alternativa.engine3d.post
 	use namespace alternativa3d;
 
 	/**
-	 * The PostRenderer class is used to render post processing effects such as MappedGlow and OuterGlow.
+	 * The PostRenderer class is used to render post-processing effects such as MappedGlow, OuterGlow and DepthOfField.
 	 * 
 	 * @author Varnius
 	 */
@@ -46,15 +47,13 @@ package alternativa.engine3d.post
 		 */
 		public function addEffect(camera:Camera3D, effect:PostEffect):void
 		{
-			var curr:EffectList = effects[camera];
+			var curr:PostEffect = effects[camera];
 			var overlay:CameraOverlay;
 			
 			// List is not created yet
 			if(curr == null)
 			{
-				curr = new EffectList();
-				curr.effect = effect;
-				effects[camera] = curr;
+				effects[camera] = effect;
 				
 				// Apply camera overlay
 				camera.addChild(effect.overlay);
@@ -68,8 +67,7 @@ package alternativa.engine3d.post
 					curr = curr.next;
 				}
 				
-				curr.next = new EffectList();
-				curr.next.effect = effect;
+				curr.next = effect;
 				camera.addChild(effect.overlay);
 				effect.upload(stage3D.context3D);
 			}
@@ -83,22 +81,24 @@ package alternativa.engine3d.post
 		 */		
 		public function removeEffect(camera:Camera3D, effect:PostEffect):void
 		{
-			var curr:EffectList = effects[camera];
-			var prev:EffectList = curr;
+			var curr:PostEffect = effects[camera];
+			var prev:PostEffect = curr;
 						
 			while(curr != null)
 			{
-				if(curr.effect == effect)
+				if(curr == effect)
 				{
 					if(prev == curr)
 					{
 						effects[camera] = curr.next;
-						curr.effect.dispose();
+						camera.removeChild(curr.overlay);
+						curr.dispose();
 					}
 					else
 					{
 						prev.next = curr.next;
-						curr.effect.dispose();
+						camera.removeChild(curr.overlay);
+						curr.dispose();
 					}
 				}
 				
@@ -114,11 +114,12 @@ package alternativa.engine3d.post
 		 */		
 		public function removeAllEffects(camera:Camera3D):void
 		{		
-			var curr:EffectList = effects[camera];
+			var curr:PostEffect = effects[camera];
 							
 			while(curr != null)
 			{
-				curr.effect.dispose();
+				curr.dispose();
+				camera.removeChild(curr.overlay);
 				curr = curr.next;
 			}
 			
@@ -133,13 +134,15 @@ package alternativa.engine3d.post
 		 */		
 		public function updateSingleEffect(camera:Camera3D, effect:PostEffect):void			
 		{
-			var curr:EffectList = effects[camera];
+			var curr:PostEffect = effects[camera];
 			
 			while(curr != null)
 			{
-				if(curr.effect == effect)
+				if(curr == effect)
 				{
-					curr.effect.update(stage3D, camera);
+					hideOverlays();
+					curr.update(stage3D, camera);
+					showOverlays();
 					break;
 				}
 				
@@ -154,27 +157,43 @@ package alternativa.engine3d.post
 		 */		
 		public function updateAllEffects(camera:Camera3D):void			
 		{
-			var curr:EffectList = effects[camera];
+			var curr:PostEffect = effects[camera];
 			
 			while(curr != null)
 			{
-				curr.effect.update(stage3D, camera);
+				hideOverlays();
+				curr.update(stage3D, camera);
+				showOverlays();
 				curr = curr.next;
 			}
 		}
 		
-		/*---------------------------
+		/*----------------------
 		Helpers
-		---------------------------*/
+		----------------------*/
 		
-		// ..
+		private function showOverlays():void
+		{
+			for each(var curr:PostEffect in effects)
+			{				
+				while(curr != null)
+				{
+					curr.overlay.visible = true;
+					curr = curr.next;
+				}
+			}
+		}
+		
+		private function hideOverlays():void
+		{
+			for each(var curr:PostEffect in effects)
+			{				
+				while(curr != null)
+				{
+					curr.overlay.visible = false;
+					curr = curr.next;
+				}
+			}
+		}
 	}
-}
-
-import alternativa.engine3d.post.effects.PostEffect;
-
-internal class EffectList
-{
-	public var effect:PostEffect;
-	public var next:EffectList;
 }

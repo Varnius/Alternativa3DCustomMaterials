@@ -1,13 +1,13 @@
-package alternativa.engine3d.post.effects
+package eu.nekobit.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import alternativa.engine3d.core.MappedGlowRenderer;
+	import eu.nekobit.core.renderers.MappedGlowRenderer;
 	import alternativa.engine3d.core.Renderer;
-	import alternativa.engine3d.materials.MappedGlowMaterial;
+	import eu.nekobit.materials.MappedGlowMaterial;
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
-	import alternativa.engine3d.post.EffectBlendMode;
+	import eu.nekobit.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
@@ -292,6 +292,9 @@ package alternativa.engine3d.post.effects
 			textureOffsets[21] =  0;
 			textureOffsets[25] =  0;
 			textureOffsets[29] =  0;*/
+			
+			// Clean up set textures
+			cachedContext3D.setTextureAt(0, null);
 			
 			// Pass changes to overlay
 			overlay.diffuseMap = glowRenderTarget1;

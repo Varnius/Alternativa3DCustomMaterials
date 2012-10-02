@@ -1,9 +1,10 @@
-package alternativa.engine3d.post.effects
+package eu.nekobit.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import alternativa.engine3d.core.CameraOverlay;
-	import alternativa.engine3d.post.EffectBlendMode;
+	
+	import eu.nekobit.core.CameraOverlay;
+	import eu.nekobit.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
@@ -35,6 +36,16 @@ package alternativa.engine3d.post.effects
 		 */
 		public var blendMode:String = EffectBlendMode.ALPHA;
 		
+		/**
+		 * Level of anti-aliasing for render textures. Not supported by FP (as of 11.4) yet.
+		 */
+		public var antiAlias:int = 0;
+		
+		/**
+		 * @private
+		 */
+		alternativa3d var next:PostEffect;
+		
 		// Vertex/UV and index buffers for simple render quad geometry
 		protected var overlayVertexBuffer:VertexBuffer3D;
 		protected var overlayIndexBuffer:IndexBuffer3D;
@@ -45,7 +56,7 @@ package alternativa.engine3d.post.effects
 		 * @private
 		 * Camera overlay to render effect to.
 		 */
-		public var overlay:CameraOverlay = new CameraOverlay();
+		alternativa3d var overlay:CameraOverlay = new CameraOverlay();
 		
 		/**
 		 * @private
@@ -66,6 +77,10 @@ package alternativa.engine3d.post.effects
 		{
 			switch(blendMode)
 			{
+				case EffectBlendMode.NONE:
+					overlay.blendFactorSource = Context3DBlendFactor.ONE;
+					overlay.blendFactorDestination = Context3DBlendFactor.ZERO;
+					break;
 				case EffectBlendMode.ADD:
 					overlay.blendFactorSource = Context3DBlendFactor.ONE;
 					overlay.blendFactorDestination = Context3DBlendFactor.ONE;
@@ -75,8 +90,8 @@ package alternativa.engine3d.post.effects
 					overlay.blendFactorDestination = Context3DBlendFactor.ONE_MINUS_SOURCE_ALPHA;
 					break;
 				case EffectBlendMode.MULTIPLY:
-					overlay.blendFactorSource = Context3DBlendFactor.ZERO;
-					overlay.blendFactorDestination = Context3DBlendFactor.SOURCE_COLOR;
+					overlay.blendFactorSource = Context3DBlendFactor.DESTINATION_COLOR;
+					overlay.blendFactorDestination = Context3DBlendFactor.ZERO;
 					break;
 			}
 		}

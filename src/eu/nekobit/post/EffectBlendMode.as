@@ -1,4 +1,4 @@
-package alternativa.engine3d.post
+package eu.nekobit.post
 {
 	/**
 	 * Defines blen mode that will be used to blend multiple effects together.
@@ -7,6 +7,7 @@ package alternativa.engine3d.post
 	 */
 	public final class EffectBlendMode
 	{
+		public static const NONE:String = "None";
 		public static const ADD:String = "Additive";
 		public static const ALPHA:String = "Alpha";
 		public static const MULTIPLY:String = "Multiply";
