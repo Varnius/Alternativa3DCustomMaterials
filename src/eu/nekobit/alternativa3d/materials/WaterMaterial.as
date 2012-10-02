@@ -1,4 +1,4 @@
-package eu.nekobit.materials
+package eu.nekobit.alternativa3d.materials
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
@@ -14,7 +14,7 @@ package eu.nekobit.materials
 	import alternativa.engine3d.objects.Mesh;
 	import alternativa.engine3d.objects.Surface;
 	import alternativa.engine3d.resources.Geometry;
-	import eu.nekobit.resources.RawTextureResource;
+	import eu.nekobit.alternativa3d.resources.RawTextureResource;
 	import alternativa.engine3d.resources.TextureResource;
 	
 	import avmplus.getQualifiedClassName;

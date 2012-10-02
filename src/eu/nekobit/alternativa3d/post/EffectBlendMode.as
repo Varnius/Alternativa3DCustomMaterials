@@ -1,4 +1,4 @@
-package eu.nekobit.post
+package eu.nekobit.alternativa3d.post
 {
 	/**
 	 * Defines blen mode that will be used to blend multiple effects together.

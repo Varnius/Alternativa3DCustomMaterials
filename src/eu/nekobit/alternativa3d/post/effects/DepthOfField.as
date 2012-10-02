@@ -1,4 +1,4 @@
-package eu.nekobit.post.effects
+package eu.nekobit.alternativa3d.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
@@ -6,9 +6,9 @@ package eu.nekobit.post.effects
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
 	
-	import eu.nekobit.core.cameras.DepthMapCamera;
-	import eu.nekobit.core.cameras.RenderToTextureCamera;
-	import eu.nekobit.post.EffectBlendMode;
+	import eu.nekobit.alternativa3d.core.cameras.DepthMapCamera;
+	import eu.nekobit.alternativa3d.core.cameras.RenderToTextureCamera;
+	import eu.nekobit.alternativa3d.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;

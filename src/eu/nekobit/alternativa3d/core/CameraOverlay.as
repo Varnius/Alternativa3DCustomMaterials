@@ -1,4 +1,4 @@
-package eu.nekobit.core
+package eu.nekobit.alternativa3d.core
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
@@ -12,8 +12,8 @@ package eu.nekobit.core
 	import alternativa.engine3d.materials.compiler.Procedure;
 	import alternativa.engine3d.resources.Geometry;
 	
-	import eu.nekobit.core.renderers.NekoRenderer;
-	import eu.nekobit.post.effects.PostEffect;
+	import eu.nekobit.alternativa3d.core.renderers.NekoRenderer;
+	import eu.nekobit.alternativa3d.post.effects.PostEffect;
 	
 	import flash.display3D.Context3D;
 	import flash.display3D.Context3DBlendFactor;

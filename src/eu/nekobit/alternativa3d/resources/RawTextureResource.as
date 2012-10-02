@@ -1,4 +1,4 @@
-package eu.nekobit.resources
+package eu.nekobit.alternativa3d.resources
 {
 	import alternativa.engine3d.alternativa3d;
 	

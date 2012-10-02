@@ -1,10 +1,10 @@
-package eu.nekobit.post.effects
+package eu.nekobit.alternativa3d.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
 	
-	import eu.nekobit.core.CameraOverlay;
-	import eu.nekobit.post.EffectBlendMode;
+	import eu.nekobit.alternativa3d.core.CameraOverlay;
+	import eu.nekobit.alternativa3d.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;

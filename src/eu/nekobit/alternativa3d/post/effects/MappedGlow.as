@@ -1,13 +1,13 @@
-package eu.nekobit.post.effects
+package eu.nekobit.alternativa3d.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import eu.nekobit.core.renderers.MappedGlowRenderer;
+	import eu.nekobit.alternativa3d.core.renderers.MappedGlowRenderer;
 	import alternativa.engine3d.core.Renderer;
-	import eu.nekobit.materials.MappedGlowMaterial;
+	import eu.nekobit.alternativa3d.materials.MappedGlowMaterial;
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
-	import eu.nekobit.post.EffectBlendMode;
+	import eu.nekobit.alternativa3d.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;

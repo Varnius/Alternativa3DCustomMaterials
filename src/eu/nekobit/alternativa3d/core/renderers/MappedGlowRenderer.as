@@ -1,4 +1,4 @@
-package eu.nekobit.core.renderers
+package eu.nekobit.alternativa3d.core.renderers
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.materials.ShaderProgram;

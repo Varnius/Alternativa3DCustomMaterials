@@ -1,9 +1,9 @@
-package eu.nekobit.materials
+package eu.nekobit.alternativa3d.materials
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
 	import alternativa.engine3d.core.DrawUnit;
-	import eu.nekobit.core.renderers.MappedGlowRenderer;
+	import eu.nekobit.alternativa3d.core.renderers.MappedGlowRenderer;
 	import alternativa.engine3d.core.Light3D;
 	import alternativa.engine3d.core.Object3D;
 	import alternativa.engine3d.core.Renderer;

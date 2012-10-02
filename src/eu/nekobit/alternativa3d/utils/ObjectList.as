@@ -1,4 +1,4 @@
-package eu.nekobit.utils
+package eu.nekobit.alternativa3d.utils
 {
 	import alternativa.engine3d.core.Object3D;
 

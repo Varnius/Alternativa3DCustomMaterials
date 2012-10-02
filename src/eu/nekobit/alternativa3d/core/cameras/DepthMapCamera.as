@@ -1,4 +1,4 @@
-package eu.nekobit.core.cameras
+package eu.nekobit.alternativa3d.core.cameras
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;

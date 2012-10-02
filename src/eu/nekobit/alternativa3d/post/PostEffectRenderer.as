@@ -1,10 +1,10 @@
-package eu.nekobit.post
+package eu.nekobit.alternativa3d.post
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
 	
-	import eu.nekobit.core.CameraOverlay;
-	import eu.nekobit.post.effects.PostEffect;
+	import eu.nekobit.alternativa3d.core.CameraOverlay;
+	import eu.nekobit.alternativa3d.post.effects.PostEffect;
 	
 	import flash.display.Stage3D;
 	import flash.utils.Dictionary;
