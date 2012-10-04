@@ -31,9 +31,9 @@ package eu.nekobit.alternativa3d.post.effects
 	public class OuterGlow extends PostEffect
 	{		
 		// Program cache		
-		private static var cachedConvolutionPrograms:Dictionary = new Dictionary(true);		
+		private static var programCache:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;			
-		private var convolutionProgram:ShaderProgram;
+		private var blurProgram:ShaderProgram;
 		
 		// Render targets for internal rendering		
 		alternativa3d var renderTarget1:Texture;
@@ -164,8 +164,39 @@ package eu.nekobit.alternativa3d.post.effects
 				return;
 			}
 			
+			/*-------------------
+			Update cache
+			-------------------*/
+			
+			var contextJustUpdated:Boolean = false;
+			
+			if(stage3D.context3D != cachedContext3D)
+			{
+				cachedContext3D = stage3D.context3D;
+				
+				var programs:Dictionary = programCache[cachedContext3D];
+				
+				// No programs created yet
+				if(programs == null)
+				{					
+					programs = new Dictionary();
+					programCache[cachedContext3D] = programs;
+					
+					blurProgram = getBlurProgram();
+					blurProgram.upload(cachedContext3D);
+					
+					programs["BlurProgram"] = blurProgram;
+				}
+				else 
+				{
+					blurProgram = programs["BlurProgram"];
+				}
+				
+				contextJustUpdated = true;
+			}
+			
 			// Handle render target textures
-			if(renderTarget1 == null || renderTarget2 == null || renderTarget3 == null|| prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
+			if(contextJustUpdated || renderTarget1 == null || renderTarget2 == null || renderTarget3 == null|| prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
 			{				
 				renderTarget1 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
 				renderTarget2 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
@@ -207,20 +238,6 @@ package eu.nekobit.alternativa3d.post.effects
 			camera.view.backgroundAlpha = oldAlpha;
 			stage3D.context3D.setRenderToBackBuffer();		
 			
-			// Update cached context3D and shader programs when context3D changes
-			if(filterCamera.context3D != cachedContext3D)
-			{
-				cachedContext3D = filterCamera.context3D;
-				convolutionProgram = cachedConvolutionPrograms[cachedContext3D];
-				
-				if(convolutionProgram == null)
-				{
-					convolutionProgram = getConvolutionProgram();
-					convolutionProgram.upload(cachedContext3D);
-					cachedConvolutionPrograms[cachedContext3D] = convolutionProgram;
-				}				
-			}
-			
 			/*-------------------
 			Horizontal blur pass
 			-------------------*/
@@ -245,7 +262,7 @@ package eu.nekobit.alternativa3d.post.effects
 			stage3D.context3D.setTextureAt(0, renderTarget3);
 			
 			// Set program
-			stage3D.context3D.setProgram(convolutionProgram.program);
+			stage3D.context3D.setProgram(blurProgram.program);
 			
 			// Render intermediate convolution result
 			stage3D.context3D.setRenderToTexture(renderTarget2);
@@ -287,7 +304,7 @@ package eu.nekobit.alternativa3d.post.effects
 			stage3D.context3D.setTextureAt(0, renderTarget2);
 			
 			// Set program
-			stage3D.context3D.setProgram(convolutionProgram.program);
+			stage3D.context3D.setProgram(blurProgram.program);
 			
 			// Render intermediate convolution result
 			stage3D.context3D.setRenderToTexture(renderTarget1);
@@ -333,23 +350,23 @@ package eu.nekobit.alternativa3d.post.effects
 		Helpers
 		---------------------------*/
 		
-		private function getConvolutionProgram():ShaderProgram
+		private function getBlurProgram():ShaderProgram
 		{
 			var vertexLinker:Linker = new Linker(Context3DProgramType.VERTEX);
 			var fragmentLinker:Linker = new Linker(Context3DProgramType.FRAGMENT);
 			
-			vertexLinker.addProcedure(convolutionVertexProcedure);
-			fragmentLinker.addProcedure(convolutionFragmentProcedure);
+			vertexLinker.addProcedure(blurVertexProcedure);
+			fragmentLinker.addProcedure(blurFragmentProcedure);
 			fragmentLinker.varyings = vertexLinker.varyings;
 			
 			return new ShaderProgram(vertexLinker, fragmentLinker);
 		}
 		
 		/*---------------------------
-		Convolution procedures
+		Blur shaders
 		---------------------------*/
 		
-		static alternativa3d const convolutionVertexProcedure:Procedure = new Procedure(
+		static alternativa3d const blurVertexProcedure:Procedure = new Procedure(
 		[
 			// Declarations
 			"#a0=aPosition",			
@@ -385,7 +402,7 @@ package eu.nekobit.alternativa3d.post.effects
 			"mov o0 a0"
 		], "vertexProcedure");
 		
-		static alternativa3d const convolutionFragmentProcedure:Procedure = new Procedure(
+		static alternativa3d const blurFragmentProcedure:Procedure = new Procedure(
 		[
 			// Declarations
 			"#s0=sDiffuseMap",

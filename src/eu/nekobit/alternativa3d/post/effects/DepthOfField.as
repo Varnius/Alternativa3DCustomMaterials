@@ -17,6 +17,7 @@ package eu.nekobit.alternativa3d.post.effects
 	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.Context3DVertexBufferFormat;
 	import flash.display3D.textures.Texture;
+	import flash.utils.Dictionary;
 	
 	use namespace alternativa3d;
 	
@@ -26,6 +27,7 @@ package eu.nekobit.alternativa3d.post.effects
 	public class DepthOfField extends PostEffect
 	{
 		// Cache	
+		private static var programCache:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;
 		private var blurProgram:ShaderProgram;
 		private var finalProgram:ShaderProgram;
@@ -101,37 +103,54 @@ package eu.nekobit.alternativa3d.post.effects
 			Update cache
 			-------------------*/
 			
-			var contextUpdated:Boolean = false;
+			var contextJustUpdated:Boolean = false;
 			
 			if(stage3D.context3D != cachedContext3D)
 			{
 				cachedContext3D = stage3D.context3D;
 				
-				blurProgram = getBlurProgram();
-				finalProgram = getFinalProgram();
-				blurProgram.upload(cachedContext3D);
-				finalProgram.upload(cachedContext3D);
+				var programs:Dictionary = programCache[cachedContext3D];
 				
-				contextUpdated = true;
+				// No programs created yet
+				if(programs == null)
+				{					
+					programs = new Dictionary();
+					programCache[cachedContext3D] = programs;
+					
+					blurProgram = getBlurProgram();
+					finalProgram = getFinalProgram();
+					blurProgram.upload(cachedContext3D);
+					finalProgram.upload(cachedContext3D);
+					
+					programs["BlurProgram"] = blurProgram;
+					programs["FinalProgram"] = finalProgram;
+				}
+				else 
+				{
+					blurProgram = programs["BlurProgram"];
+					finalProgram = programs["FinalProgram"];
+				}
+				
+				contextJustUpdated = true;
 			}
 			
 			// Handle render target textures
-			if(contextUpdated || depthMap == null || prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
+			if(contextJustUpdated || depthMap == null || prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
 			{
 				depthCamera.texWidth = prerenderTextureWidth;
 				depthCamera.texHeight = prerenderTextureHeight;
 				
-				depthMap = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
-				regularScene = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
-				blurTexture1 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
-				blurTexture2 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				depthMap = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				regularScene = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				blurTexture1 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				blurTexture2 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
 				
 				hOffset = 1 / prerenderTextureWidth;
 				vOffset = 1 / prerenderTextureHeight;
 				
 				prevPrerenderTexWidth = prerenderTextureWidth;
 				prevPrerenderTexHeight = prerenderTextureHeight;
-				contextUpdated = false;
+				contextJustUpdated = false;
 			}
 			
 			// Copy camera properties

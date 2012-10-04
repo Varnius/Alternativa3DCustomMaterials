@@ -222,7 +222,11 @@ package eu.nekobit.alternativa3d.core.cameras
 					}
 					
 					// Set texture as render target
-					context3D.setRenderToTexture(texture, true);
+					if(texture != null)
+					{
+						context3D.setRenderToTexture(texture, true);
+					}
+					
 					context3D.clear(r, g, b, view.backgroundAlpha);
 					
 					// Check getting in frustum and occluding

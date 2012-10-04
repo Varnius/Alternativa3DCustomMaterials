@@ -2,11 +2,13 @@ package eu.nekobit.alternativa3d.post.effects
 {
 	import alternativa.engine3d.alternativa3d;
 	import alternativa.engine3d.core.Camera3D;
-	import eu.nekobit.alternativa3d.core.renderers.MappedGlowRenderer;
 	import alternativa.engine3d.core.Renderer;
-	import eu.nekobit.alternativa3d.materials.MappedGlowMaterial;
+	import alternativa.engine3d.materials.ShaderProgram;
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
+	
+	import eu.nekobit.alternativa3d.core.renderers.MappedGlowRenderer;
+	import eu.nekobit.alternativa3d.materials.MappedGlowMaterial;
 	import eu.nekobit.alternativa3d.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
@@ -26,17 +28,18 @@ package eu.nekobit.alternativa3d.post.effects
 	 */
 	public class MappedGlow extends PostEffect
 	{
-		// Convolution program cache		
-		private static var cachedConvolutionPrograms:Dictionary = new Dictionary(true);		
+		// Program cache
+		private static var programCache:Dictionary = new Dictionary(true);	
 		private var cachedContext3D:Context3D;		
-		private var convolutionProgram:GlowConvolutionProgram;		
+		private var blurProgram:ShaderProgram;	
+		
 		private var prevPrerenderTexWidth:int = 0;
 		private var prevPrerenderTexHeight:int = 0;
 		private var glowRenderer:MappedGlowRenderer = new MappedGlowRenderer();
 		private var hOffset:Number;
 		private var vOffset:Number;		
 		
-		// Texture offsets for convolution shader
+		// Texture offsets for blur shader
 		private var textureOffsets:Vector.<Number> = new <Number>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		
 		// Convolution kernel values
@@ -47,9 +50,14 @@ package eu.nekobit.alternativa3d.post.effects
 		alternativa3d var glowRenderTarget2:Texture;
 		
 		/**
-		 * Number of glow passes. Increases glow spread. More passes degrade performance.
+		 * Horizontal glow amount
 		 */
-		public var numGlowPasses:int = 2;
+		public var glowX:Number = 1.0;
+		
+		/**
+		 * Vertical glow amount
+		 */
+		public var glowY:Number = 1.0;	
 		
 		/**
 		 * Glow blending amount.
@@ -76,8 +84,39 @@ package eu.nekobit.alternativa3d.post.effects
 				return;
 			}
 			
+			/*-------------------
+			Update cache
+			-------------------*/
+			
+			var contextJustUpdated:Boolean = false;
+			
+			if(stage3D.context3D != cachedContext3D)
+			{
+				cachedContext3D = stage3D.context3D;
+				
+				var programs:Dictionary = programCache[cachedContext3D];
+
+				// No programs created yet
+				if(programs == null)
+				{		
+					programs = new Dictionary();
+					programCache[cachedContext3D] = programs;
+					
+					blurProgram = getBlurProgram();
+					blurProgram.upload(cachedContext3D);
+					
+					programs["BlurProgram"] = blurProgram;
+				}
+				else 
+				{
+					blurProgram = programs["BlurProgram"];
+				}
+				
+				contextJustUpdated = true;
+			}
+			
 			// Handle render target textures
-			if(glowRenderTarget1 == null || glowRenderTarget2 == null || prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
+			if(contextJustUpdated || glowRenderTarget1 == null || glowRenderTarget2 == null || prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
 			{				
 				glowRenderTarget1 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
 				glowRenderTarget2 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
@@ -110,84 +149,47 @@ package eu.nekobit.alternativa3d.post.effects
 			/*-------------------
 			Horizontal glow 
 			render pass
-			-------------------*/			
-			
-			// Update cached context3D and convolution program when context3D changes
-			if(camera.context3D != cachedContext3D)
-			{
-				cachedContext3D = camera.context3D;
-				convolutionProgram = cachedConvolutionPrograms[cachedContext3D];
-				
-				if(convolutionProgram == null)
-				{
-					convolutionProgram = getConvolutionProgram();
-					convolutionProgram.upload(cachedContext3D);
-					cachedConvolutionPrograms[cachedContext3D] = convolutionProgram;
-				}
-			}	 
+			-------------------*/ 
 			
 			var i:int;
 			var currRenderTarget:Texture = glowRenderTarget2;
 			var currRenderSource:Texture = glowRenderTarget1;
 			
-			//todo: + half texel as in directX?			
-			/*textureOffsets[0] = -4 * hOffset;
-			textureOffsets[4] = -3 * hOffset;
-			textureOffsets[8] = -2 * hOffset;
-			textureOffsets[12] =     -hOffset;
-			textureOffsets[16] =      hOffset;
-			textureOffsets[20] =  2 * hOffset;
-			textureOffsets[24] =  3 * hOffset;
-			textureOffsets[28] =  4 * hOffset;*/
+			textureOffsets[0]  = -3 * hOffset * glowX;
+			textureOffsets[4]  = -2 * hOffset * glowX;
+			textureOffsets[8]  =     -hOffset * glowX;
+			textureOffsets[12] =  0;
+			textureOffsets[16] =      hOffset * glowX;
+			textureOffsets[20] =  2 * hOffset * glowX;
+			textureOffsets[24] =  3 * hOffset * glowX;
 			
-			textureOffsets[0]  = -hOffset;
-			textureOffsets[4]  = -hOffset;
-			textureOffsets[8]  = -hOffset;
-			textureOffsets[12] =     0;
-			textureOffsets[16] =     0;
-			textureOffsets[20] =  hOffset;
-			textureOffsets[24] =  hOffset;
-			textureOffsets[28] =  hOffset;
+			// Set attributes
+			cachedContext3D.setVertexBufferAt(0, overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
+			cachedContext3D.setVertexBufferAt(1, overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);				
 			
-			textureOffsets[1]  =  vOffset;
-			textureOffsets[5]  =  0;
-			textureOffsets[9]  = -vOffset;
-			textureOffsets[13] =  vOffset;
-			textureOffsets[17] = -vOffset;
-			textureOffsets[21] =  vOffset;
-			textureOffsets[25] =  0;
-			textureOffsets[29] = -vOffset;
+			// Set constants 
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, textureOffsets, 8);
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, convValues, 1);
 			
-			for(i = 0; i < numGlowPasses; i++)
+			// Set samplers
+			cachedContext3D.setTextureAt(0, currRenderSource);
+			
+			// Set program
+			cachedContext3D.setProgram(blurProgram.program);
+			
+			// Render intermediate blur result
+			cachedContext3D.setRenderToTexture(currRenderTarget);
+			cachedContext3D.clear(0,0,0,0);
+			cachedContext3D.drawTriangles(overlayIndexBuffer);			
+			cachedContext3D.present();
+			
+			if(currRenderTarget == glowRenderTarget2)
 			{
-				// Set attributes
-				stage3D.context3D.setVertexBufferAt(0, overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
-				stage3D.context3D.setVertexBufferAt(1, overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);				
-				
-				// Set constants 
-				stage3D.context3D.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, textureOffsets, 8);
-				stage3D.context3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, convValues, 1);
-				
-				// Set samplers
-				stage3D.context3D.setTextureAt(0, currRenderSource);
-				
-				// Set program
-				stage3D.context3D.setProgram(convolutionProgram.program);
-				
-				// Render intermediate convolution result
-				stage3D.context3D.setRenderToTexture(currRenderTarget);
-				stage3D.context3D.clear(0,0,0,0);
-				stage3D.context3D.drawTriangles(overlayIndexBuffer);			
-				stage3D.context3D.present();
-				
-				if(currRenderTarget == glowRenderTarget2)
-				{
-					currRenderTarget = glowRenderTarget1;
-					currRenderSource = glowRenderTarget2;
-				} else {
-					currRenderTarget = glowRenderTarget2;
-					currRenderSource = glowRenderTarget1;
-				}
+				currRenderTarget = glowRenderTarget1;
+				currRenderSource = glowRenderTarget2;
+			} else {
+				currRenderTarget = glowRenderTarget2;
+				currRenderSource = glowRenderTarget1;
 			}
 			
 			// Reset texture offsets
@@ -197,104 +199,63 @@ package eu.nekobit.alternativa3d.post.effects
 			textureOffsets[12] = 0;
 			textureOffsets[16] = 0;
 			textureOffsets[20] = 0;
-			textureOffsets[24] = 0;
-			textureOffsets[28] = 0;
-			
-			textureOffsets[1] = 0;
-			textureOffsets[5] = 0;
-			textureOffsets[9] = 0;
-			textureOffsets[13] = 0;
-			textureOffsets[17] =  0;
-			textureOffsets[21] =  0;
-			textureOffsets[25] =  0;
-			textureOffsets[29] =  0;
+			textureOffsets[24] = 0;	
 			
 			/*-------------------
 			Vertical glow 
 			render pass
 			-------------------*/			
 			
-			/*textureOffsets[1]  = -4 * vOffset;
-			textureOffsets[5]  = -3 * vOffset;
-			textureOffsets[9]  = -2 * vOffset;
-			textureOffsets[13] =     -vOffset;
-			textureOffsets[17] =      vOffset;
-			textureOffsets[21] =  2 * vOffset;
-			textureOffsets[25] =  3 * vOffset;
-			textureOffsets[29] =  4 * vOffset;*/
+			textureOffsets[1]  = -3 * vOffset * glowY;
+			textureOffsets[5]  = -2 * vOffset * glowY;
+			textureOffsets[9]  =     -vOffset * glowY;
+			textureOffsets[13] =  0;
+			textureOffsets[17] =      vOffset * glowY;
+			textureOffsets[21] =  2 * vOffset * glowY;
+			textureOffsets[25] =  3 * vOffset * glowY;
 			
-			/*textureOffsets[0] = -hOffset;
-			textureOffsets[4] = -hOffset;
-			textureOffsets[8] = -hOffset;
-			textureOffsets[12] =     0;
-			textureOffsets[16] =     0;
-			textureOffsets[20] =  hOffset;
-			textureOffsets[24] =  hOffset;
-			textureOffsets[28] =  hOffset;
+			// Set attributes
+			cachedContext3D.setVertexBufferAt(0, overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
+			cachedContext3D.setVertexBufferAt(1, overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);			
 			
-			textureOffsets[1] = vOffset;
-			textureOffsets[5] = 0;
-			textureOffsets[9] = -vOffset;
-			textureOffsets[13] =     vOffset;
-			textureOffsets[17] =     -vOffset;
-			textureOffsets[21] =  vOffset;
-			textureOffsets[25] =  0;
-			textureOffsets[29] =  -vOffset;
+			// Set constants 
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, textureOffsets, 8);
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, convValues, 1);
 			
-			for(i = 0; i < numGlowPasses; i++)
+			// Set samplers
+			cachedContext3D.setTextureAt(0, currRenderSource);
+			
+			// Set program
+			cachedContext3D.setProgram(blurProgram.program);
+			
+			// Render intermediate blur result
+			cachedContext3D.setRenderToTexture(currRenderTarget);
+			
+			cachedContext3D.clear(0,0,0,0);
+			cachedContext3D.drawTriangles(overlayIndexBuffer);			
+			cachedContext3D.present();
+			
+			if(currRenderTarget == glowRenderTarget2)
 			{
-				// Set attributes
-				stage3D.context3D.setVertexBufferAt(0, overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
-				stage3D.context3D.setVertexBufferAt(1, overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);			
-				
-				// Set constants 
-				stage3D.context3D.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, textureOffsets, 8);
-				stage3D.context3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, convValues, 1);
-				
-				// Set samplers
-				stage3D.context3D.setTextureAt(0, currRenderSource);
-				
-				// Set program
-				stage3D.context3D.setProgram(convolutionProgram.program);
-				
-				// Render intermediate convolution result
-				stage3D.context3D.setRenderToTexture(currRenderTarget);
-				
-				stage3D.context3D.clear(0,0,0,0);
-				stage3D.context3D.drawTriangles(overlayIndexBuffer);			
-				stage3D.context3D.present();
-				
-				if(currRenderTarget == glowRenderTarget2)
-				{
-					currRenderTarget = glowRenderTarget1;
-					currRenderSource = glowRenderTarget2;
-				} else {
-					currRenderTarget = glowRenderTarget2;
-					currRenderSource = glowRenderTarget1;
-				}
-			}*/
-			
-			// Reset texture offsets
-			/*textureOffsets[0]  = 0;
-			textureOffsets[4]  = 0;
-			textureOffsets[8]  = 0;
-			textureOffsets[12] = 0;
-			textureOffsets[16] = 0;
-			textureOffsets[20] = 0;
-			textureOffsets[24] = 0;
-			textureOffsets[28] = 0;
+				currRenderTarget = glowRenderTarget1;
+				currRenderSource = glowRenderTarget2;
+			} else {
+				currRenderTarget = glowRenderTarget2;
+				currRenderSource = glowRenderTarget1;
+			}
 			
 			textureOffsets[1] = 0;
 			textureOffsets[5] = 0;
 			textureOffsets[9] = 0;
 			textureOffsets[13] = 0;
-			textureOffsets[17] =     0;
-			textureOffsets[21] =  0;
-			textureOffsets[25] =  0;
-			textureOffsets[29] =  0;*/
+			textureOffsets[17] = 0;
+			textureOffsets[21] = 0;
+			textureOffsets[25] = 0;	
 			
-			// Clean up set textures
+			// Clean up
 			cachedContext3D.setTextureAt(0, null);
+			cachedContext3D.setVertexBufferAt(0, null);
+			cachedContext3D.setVertexBufferAt(1, null);
 			
 			// Pass changes to overlay
 			overlay.diffuseMap = glowRenderTarget1;
@@ -317,23 +278,23 @@ package eu.nekobit.alternativa3d.post.effects
 		Helpers
 		---------------------------*/
 		
-		private function getConvolutionProgram():GlowConvolutionProgram
+		private function getBlurProgram():ShaderProgram
 		{
 			var vertexLinker:Linker = new Linker(Context3DProgramType.VERTEX);
 			var fragmentLinker:Linker = new Linker(Context3DProgramType.FRAGMENT);
 			
-			vertexLinker.addProcedure(convolutionVertexProcedure);
-			fragmentLinker.addProcedure(convolutionFragmentProcedure);
+			vertexLinker.addProcedure(blurVertexProcedure);
+			fragmentLinker.addProcedure(blurFragmentProcedure);
 			fragmentLinker.varyings = vertexLinker.varyings;
 			
-			return new GlowConvolutionProgram(vertexLinker, fragmentLinker);
+			return new ShaderProgram(vertexLinker, fragmentLinker);
 		}
 		
 		/*---------------------------
-		Convolution procedures
+		Blur shaders
 		---------------------------*/
 		
-		static alternativa3d const convolutionVertexProcedure:Procedure = new Procedure(
+		static alternativa3d const blurVertexProcedure:Procedure = new Procedure(
 		[
 			// Declarations
 			"#a0=aPosition",			
@@ -345,7 +306,7 @@ package eu.nekobit.alternativa3d.post.effects
 			"#c4=cUVOffset4",
 			"#c5=cUVOffset5",
 			"#c6=cUVOffset6",
-			"#c7=cUVOffset7",
+			//"#c7=cUVOffset7",
 			"#v0=vUV0",
 			"#v1=vUV1",
 			"#v2=vUV2",
@@ -353,7 +314,7 @@ package eu.nekobit.alternativa3d.post.effects
 			"#v4=vUV4",
 			"#v5=vUV5",
 			"#v6=vUV6",
-			"#v7=vUV7",
+			//"#v7=vUV7",
 			
 			// Add texture offsets, move to varyings
 			"add v0 a1 c0",
@@ -363,17 +324,18 @@ package eu.nekobit.alternativa3d.post.effects
 			"add v4 a1 c4",
 			"add v5 a1 c5",
 			"add v6 a1 c6",
-			"add v7 a1 c7",
+			//"add v7 a1 c7",
 			
 			// Set vertex position as output
 			"mov o0 a0"
 		], "vertexProcedure");
 		
-		static alternativa3d const convolutionFragmentProcedure:Procedure = new Procedure(
+		static alternativa3d const blurFragmentProcedure:Procedure = new Procedure(
 		[
 			// Declarations
 			"#s0=sDiffuseMap",
-			"#c0=cConvolution",
+			"#c0=cConvolutionVals1",
+			"#c1=cConvolutionVals2",
 			"#v0=vUV0",
 			"#v1=vUV1",
 			"#v2=vUV2",
@@ -381,70 +343,38 @@ package eu.nekobit.alternativa3d.post.effects
 			"#v4=vUV4",
 			"#v5=vUV5",
 			"#v6=vUV6",
-			"#v7=vUV7",
+			//"#v7=vUV7",
 			
 			// Apply convolution kernel
 			
 			"tex t0,v0,s0 <2d,clamp,linear>",
 			"tex t1,v1,s0 <2d,clamp,linear>",
-			"mul t0 t0 c0",
-			"mul t1 t1 c0",
+			"mul t0 t0 c0.x",
+			"mul t1 t1 c0.y",
 			"add t0 t0 t1",
 			
 			"tex t1,v2,s0 <2d,clamp,linear>",
 			"tex t2,v3,s0 <2d,clamp,linear>",
-			"mul t1 t1 c0",
-			"mul t2 t2 c0",
+			"mul t1 t1 c0.z",
+			"mul t2 t2 c0.w",
 			"add t0 t0 t1",
 			"add t0 t0 t2",
 			
 			"tex t1,v4,s0 <2d,clamp,linear>",
 			"tex t2,v5,s0 <2d,clamp,linear>",
-			"mul t1 t1 c0",
-			"mul t2 t2 c0",
+			"mul t1 t1 c1.x",
+			"mul t2 t2 c1.y",
 			"add t0 t0 t1",
 			"add t0 t0 t2",
 			
 			"tex t1,v6,s0 <2d,clamp,linear>",
-			"tex t2,v7,s0 <2d,clamp,linear>",
-			"mul t1 t1 c0",
-			"mul t2 t2 c0",
+			//"tex t2,v7,s0 <2d,clamp,linear>",
+			"mul t1 t1 c1.z",
+			//"mul t2 t2 c1.w",
 			"add t0 t0 t1",
-			"add t0 t0 t2",
+			//"add t0 t0 t2",
 			
 			"mov o0 t0",
 		], "fragmentProcedure");
-	}
-}
-
-import alternativa.engine3d.materials.ShaderProgram;
-import alternativa.engine3d.materials.compiler.Linker;
-
-import flash.display3D.Context3D;
-
-class GlowConvolutionProgram extends ShaderProgram
-{
-	// Vertex
-	public var aPosition:int = -1;
-	public var aUV:int = -1;
-	
-	// Fragment
-	public var sDiffuseMap:int = -1;
-	
-	public function GlowConvolutionProgram(vertex:Linker, fragment:Linker)
-	{
-		super(vertex, fragment);
-	}
-	
-	override public function upload(context3D:Context3D):void
-	{
-		super.upload(context3D);
-		
-		// Vertex shader
-		aPosition = vertexShader.findVariable("aPosition");
-		aUV = vertexShader.findVariable("aUV");
-		
-		// Fragment shader
-		sDiffuseMap = fragmentShader.findVariable("sDiffuseMap");
 	}
 }

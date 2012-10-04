@@ -21,6 +21,8 @@ package eu.nekobit.alternativa3d.post.effects
 	 */
 	public class PostEffect
 	{
+		private var cachedContext3D:Context3D;
+		
 		/**
 		 * Prerender texture width.
 		 */
@@ -75,6 +77,16 @@ package eu.nekobit.alternativa3d.post.effects
 		 */
 		alternativa3d function update(stage3D:Stage3D, camera:Camera3D):void
 		{
+			if(stage3D.context3D != cachedContext3D)
+			{
+				cachedContext3D = stage3D.context3D;
+				
+				if(cachedContext3D != null)
+				{
+					upload(cachedContext3D);
+				}
+			}
+			
 			switch(blendMode)
 			{
 				case EffectBlendMode.NONE:
@@ -102,16 +114,14 @@ package eu.nekobit.alternativa3d.post.effects
 		 */
 		alternativa3d function upload(context3D:Context3D):void
 		{
+			cachedContext3D = context3D;
 			overlay.geometry.upload(context3D);
 			
 			// Init buffers for overlay geometry
-			if(overlayVertexBuffer == null)
-			{
-				overlayVertexBuffer = context3D.createVertexBuffer(4, 5);
-				overlayVertexBuffer.uploadFromVector(vertices, 0, 4);
-				overlayIndexBuffer = context3D.createIndexBuffer(6);
-				overlayIndexBuffer.uploadFromVector(indices, 0, 6);
-			}	
+			overlayVertexBuffer = context3D.createVertexBuffer(4, 5);
+			overlayVertexBuffer.uploadFromVector(vertices, 0, 4);
+			overlayIndexBuffer = context3D.createIndexBuffer(6);
+			overlayIndexBuffer.uploadFromVector(indices, 0, 6);
 		}
 		
 		/**
