@@ -7,12 +7,14 @@ package eu.nekobit.alternativa3d.post.effects
 	import alternativa.engine3d.materials.compiler.Linker;
 	import alternativa.engine3d.materials.compiler.Procedure;
 	
+	import eu.nekobit.alternativa3d.core.cameras.RenderToTextureCamera;
 	import eu.nekobit.alternativa3d.core.renderers.MappedGlowRenderer;
 	import eu.nekobit.alternativa3d.materials.MappedGlowMaterial;
 	import eu.nekobit.alternativa3d.post.EffectBlendMode;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
+	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DProgramType;
 	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.Context3DVertexBufferFormat;
@@ -37,7 +39,8 @@ package eu.nekobit.alternativa3d.post.effects
 		private var prevPrerenderTexHeight:int = 0;
 		private var glowRenderer:MappedGlowRenderer = new MappedGlowRenderer();
 		private var hOffset:Number;
-		private var vOffset:Number;		
+		private var vOffset:Number;
+		private var prerenderCamera:RenderToTextureCamera = new RenderToTextureCamera(1, 10);
 		
 		// Texture offsets for convolution shader
 		private var textureOffsets:Vector.<Number> = new <Number>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -65,6 +68,7 @@ package eu.nekobit.alternativa3d.post.effects
 		public function MappedGlow()
 		{
 			blendMode = EffectBlendMode.ADD;
+			prerenderCamera.renderer = glowRenderer;
 		}
 		
 		/**
@@ -113,33 +117,48 @@ package eu.nekobit.alternativa3d.post.effects
 			// Handle render target textures
 			if(contextJustUpdated || glowRenderTarget1 == null || glowRenderTarget2 == null || prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
 			{				
-				glowRenderTarget1 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
-				glowRenderTarget2 = stage3D.context3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				glowRenderTarget1 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				glowRenderTarget2 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
 				
 				hOffset = 1 / prerenderTextureWidth;
 				vOffset = 1 / prerenderTextureHeight;
 				
 				prevPrerenderTexWidth = prerenderTextureWidth;
 				prevPrerenderTexHeight = prerenderTextureHeight;
-			}		
+			}			
 			
-			// Render all glow sources to texture
-			stage3D.context3D.setRenderToTexture(glowRenderTarget1, true);
-			stage3D.context3D.clear(0, 0, 0, 0);
+			prerenderCamera.setPosition(camera.x, camera.y, camera.z);			
+			prerenderCamera.rotationX = camera.rotationX;
+			prerenderCamera.rotationY = camera.rotationY;
+			prerenderCamera.rotationZ = camera.rotationZ;
+			prerenderCamera.fov = camera.fov;
+			prerenderCamera.nearClipping = camera.nearClipping;
+			prerenderCamera.farClipping = camera.farClipping;
+			prerenderCamera.orthographic = camera.orthographic;
 			
-			// Use custom renderer to draw only objects that use GlowMaterial
-			var oldRenderer:Renderer = camera.renderer;	
-			var oldAlpha:Number = camera.view.backgroundAlpha;
-			camera.renderer = glowRenderer;
-			camera.view.backgroundAlpha = 0;
+			// Reuse same view
+			prerenderCamera.view = camera.view;
+			camera.parent.addChild(prerenderCamera);	
 			
+			var oldAlpha:Number = prerenderCamera.view.backgroundAlpha;
+			var oldBGColor:uint = prerenderCamera.view.backgroundColor;
+			prerenderCamera.view.backgroundAlpha = 0;
+			prerenderCamera.view.backgroundColor = 0x000000;
+			
+			/*-------------------
+			Render all glow sources
+			to texture
+			-------------------*/	
+			
+			// todo: antialiasing not supported by FP
+			prerenderCamera.texture = glowRenderTarget1;
 			MappedGlowMaterial.glowRenderPass = true;
-			camera.render(stage3D);
+			prerenderCamera.render(stage3D);
 			MappedGlowMaterial.glowRenderPass = false;
 			
-			camera.renderer = oldRenderer;
 			camera.view.backgroundAlpha = oldAlpha;
-			stage3D.context3D.setRenderToBackBuffer();			
+			camera.view.backgroundColor = oldBGColor;
+			camera.parent.removeChild(prerenderCamera);	
 			
 			/*-------------------
 			Horizontal glow 
@@ -181,24 +200,25 @@ package eu.nekobit.alternativa3d.post.effects
 			for(i = 0; i < numGlowPasses; i++)
 			{
 				// Set attributes
-				stage3D.context3D.setVertexBufferAt(0, overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
-				stage3D.context3D.setVertexBufferAt(1, overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);				
+				cachedContext3D.setVertexBufferAt(0, overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
+				cachedContext3D.setVertexBufferAt(1, overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);				
 				
 				// Set constants 
-				stage3D.context3D.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, textureOffsets, 8);
-				stage3D.context3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, convValues, 1);
+				cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.VERTEX, 0, textureOffsets, 8);
+				cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, convValues, 1);
 				
 				// Set samplers
-				stage3D.context3D.setTextureAt(0, currRenderSource);
+				cachedContext3D.setTextureAt(0, currRenderSource);
 				
 				// Set program
-				stage3D.context3D.setProgram(blurProgram.program);
+				cachedContext3D.setProgram(blurProgram.program);
 				
 				// Render intermediate convolution result
-				stage3D.context3D.setRenderToTexture(currRenderTarget);
-				stage3D.context3D.clear(0,0,0,0);
-				stage3D.context3D.drawTriangles(overlayIndexBuffer);			
-				stage3D.context3D.present();
+				cachedContext3D.setRenderToTexture(currRenderTarget);
+				cachedContext3D.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ZERO);
+				cachedContext3D.clear(0,0,0,0);
+				cachedContext3D.drawTriangles(overlayIndexBuffer);			
+				cachedContext3D.present();
 				
 				if(currRenderTarget == glowRenderTarget2)
 				{
@@ -313,8 +333,10 @@ package eu.nekobit.alternativa3d.post.effects
 			textureOffsets[25] =  0;
 			textureOffsets[29] =  0;*/
 			
-			// Clean up set textures
+			// Clean up
 			cachedContext3D.setTextureAt(0, null);
+			stage3D.context3D.setVertexBufferAt(0, null);
+			stage3D.context3D.setVertexBufferAt(1, null);
 			
 			// Pass changes to overlay
 			overlay.diffuseMap = glowRenderTarget1;
