@@ -50,9 +50,7 @@ package eu.nekobit.alternativa3d.post.effects
 		private var textureOffsets:Vector.<Number> = new <Number>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		
 		// Convolution kernel values
-		private var convValues:Vector.<Number> = new <Number>[
-			0.09, 0.11, 0.18, 0.24, 0.18, 0.11, 0.09, 0
-		];
+		private var convValues:Vector.<Number> = new <Number>[0.09, 0.11, 0.18, 0.24, 0.18, 0.11, 0.09, 0];
 		
 		/**
 		 * Glow blending degree.
