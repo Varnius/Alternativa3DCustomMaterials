@@ -363,7 +363,7 @@ package eu.nekobit.alternativa3d.post.effects
 		}
 		
 		/*---------------------------
-		Blur shaders
+		Blur procedures
 		---------------------------*/
 		
 		static alternativa3d const blurVertexProcedure:Procedure = new Procedure(
