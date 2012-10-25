@@ -213,7 +213,7 @@ package eu.nekobit.alternativa3d.post.effects
 			cachedContext3D.clear();
 			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);			
-			cachedContext3D.present();
+			cachedContext3D.setRenderToBackBuffer();
 		}
 		
 		/*---------------------------

@@ -11,12 +11,10 @@ package eu.nekobit.alternativa3d.core.cameras
 	import alternativa.engine3d.materials.OutputEffect;
 	import alternativa.engine3d.materials.SSAOBlur;
 	
-	import eu.nekobit.alternativa3d.core.renderers.NekoRenderer;
 	import eu.nekobit.alternativa3d.utils.ObjectList;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
-	import flash.display3D.Context3DBlendFactor;
 	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.textures.Texture;
 	import flash.geom.Rectangle;

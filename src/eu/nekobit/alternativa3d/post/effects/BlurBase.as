@@ -152,7 +152,7 @@ package eu.nekobit.alternativa3d.post.effects
 			);
 			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);			
-			cachedContext3D.present();
+			cachedContext3D.setRenderToBackBuffer();
 			
 			// Reset texture offsets
 			textureOffsets[0]  = 0;
@@ -200,7 +200,7 @@ package eu.nekobit.alternativa3d.post.effects
 			);
 			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);			
-			cachedContext3D.present();
+			cachedContext3D.setRenderToBackBuffer();
 			
 			textureOffsets[1] = 0;
 			textureOffsets[5] = 0;

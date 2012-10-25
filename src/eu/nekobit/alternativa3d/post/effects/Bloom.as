@@ -174,7 +174,7 @@ package eu.nekobit.alternativa3d.post.effects
 			cachedContext3D.clear();
 			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);			
-			cachedContext3D.present();
+			stage3D.context3D.setRenderToBackBuffer();
 			
 			/*-------------------
 			Downsample scene			
@@ -231,7 +231,7 @@ package eu.nekobit.alternativa3d.post.effects
 			cachedContext3D.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ZERO);
 			cachedContext3D.clear();			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);				
-			cachedContext3D.present();
+			stage3D.context3D.setRenderToBackBuffer();
 			
 			// Clean up
 			cachedContext3D.setVertexBufferAt(0, null);

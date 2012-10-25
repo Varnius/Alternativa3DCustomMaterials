@@ -149,22 +149,22 @@ package eu.nekobit.alternativa3d.post.effects
 			blur(renderTarget3, renderTarget4, prerenderTextureWidth / 4, prerenderTextureHeight / 4);
 			
 			/*-------------------
-			Upsample scene			
-			-------------------*/		
+			Upsample scene		
+			-------------------*/
 			
 			resample(renderTarget3, renderTarget2);
 			resample(renderTarget2, renderTarget1);
 			
 			/*-------------------
 			Render final view
-			-------------------*/			
+			-------------------*/
 			
 			// Set attributes
 			cachedContext3D.setVertexBufferAt(0, postRenderer.overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
-			cachedContext3D.setVertexBufferAt(1, postRenderer.overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);			
+			cachedContext3D.setVertexBufferAt(1, postRenderer.overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);	
 			
 			DOFConstants[0] = camera.farClipping / (camera.farClipping - camera.nearClipping);
-			DOFConstants[1] = camera.nearClipping * DOFConstants[0];			
+			DOFConstants[1] = camera.nearClipping * DOFConstants[0];
 			DOFConstants[2] = distance;
 			DOFConstants[3] = range;
 			
@@ -183,7 +183,7 @@ package eu.nekobit.alternativa3d.post.effects
 			cachedContext3D.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ZERO);
 			cachedContext3D.clear();			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);				
-			cachedContext3D.present();
+			stage3D.context3D.setRenderToBackBuffer();
 			
 			// Clean up
 			cachedContext3D.setVertexBufferAt(0, null);

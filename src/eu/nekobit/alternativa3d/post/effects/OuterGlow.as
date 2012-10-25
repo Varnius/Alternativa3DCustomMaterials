@@ -238,7 +238,7 @@ package eu.nekobit.alternativa3d.post.effects
 			
 			camera.parent.removeChild(filterCamera);
 			camera.view.backgroundAlpha = oldAlpha;
-			//stage3D.context3D.setRenderToBackBuffer();		
+			stage3D.context3D.setRenderToBackBuffer();
 			
 			/*-------------------
 			Downsample scene			
