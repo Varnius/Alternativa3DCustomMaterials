@@ -5,7 +5,6 @@ package eu.nekobit.alternativa3d.core
 	import alternativa.engine3d.core.DrawUnit;
 	import alternativa.engine3d.core.Light3D;
 	import alternativa.engine3d.core.Object3D;
-	import alternativa.engine3d.core.Renderer;
 	import alternativa.engine3d.core.VertexAttributes;
 	import alternativa.engine3d.materials.ShaderProgram;
 	import alternativa.engine3d.materials.compiler.Linker;
@@ -83,6 +82,9 @@ package eu.nekobit.alternativa3d.core
 			geometry.setAttributeValues(VertexAttributes.POSITION, vertices);
 			geometry.setAttributeValues(VertexAttributes.TEXCOORDS[0], uvs);
 			geometry.indices = indices;	
+			
+			mouseEnabled = false;
+			mouseChildren = false;
 		}		
 		
 		/**
@@ -213,7 +215,7 @@ package eu.nekobit.alternativa3d.core
 			"#v0=vUV",
 			"#c0=cAmount",
 			
-			"tex t0,v0,s0 <2d,repeat,linear>",
+			"tex t0,v0,s0 <2d,clamp,linear>",
 			"mul t0 t0 c0.x",
 			"mov o0, t0"
 		], "fragmentProcedure");
@@ -227,9 +229,9 @@ package eu.nekobit.alternativa3d.core
 			"#c0=cAmount",
 			
 			// Sample diffuse
-			"tex t0,v0,s0 <2d,repeat,nearest>",
+			"tex t0,v0,s0 <2d,clamp,linear>",
 			// Sample mask
-			"tex t1,v0,s1 <2d,repeat,linear>",
+			"tex t1,v0,s1 <2d,clamp,linear>",
 			// 1 - mask alpha value
 			"sub t1.w c0.w t1.w",
 			// Apply mask

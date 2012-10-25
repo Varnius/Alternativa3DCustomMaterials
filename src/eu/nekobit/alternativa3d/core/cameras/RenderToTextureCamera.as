@@ -7,12 +7,20 @@ package eu.nekobit.alternativa3d.core.cameras
 	import alternativa.engine3d.core.Object3D;
 	import alternativa.engine3d.core.Occluder;
 	import alternativa.engine3d.core.RendererContext3DProperties;
+	import alternativa.engine3d.materials.EncodeDepthMaterial;
+	import alternativa.engine3d.materials.OutputEffect;
+	import alternativa.engine3d.materials.SSAOBlur;
 	
+	import eu.nekobit.alternativa3d.core.renderers.NekoRenderer;
 	import eu.nekobit.alternativa3d.utils.ObjectList;
 	
 	import flash.display.Stage3D;
 	import flash.display3D.Context3D;
+	import flash.display3D.Context3DBlendFactor;
+	import flash.display3D.Context3DTextureFormat;
 	import flash.display3D.textures.Texture;
+	import flash.geom.Rectangle;
+	import flash.geom.Vector3D;
 	
 	use namespace alternativa3d;
 	
@@ -23,19 +31,43 @@ package eu.nekobit.alternativa3d.core.cameras
 	 */
 	public class RenderToTextureCamera extends Camera3D
 	{
-		alternativa3d var renderOnly:ObjectList;		
-		alternativa3d var filterObjects:Boolean = false;
-		alternativa3d var texture:Texture;
+		public static const DEPTH_FOR_CACHE:int = 111;
 		
-		public function RenderToTextureCamera(nearClipping:Number, farClipping:Number)
+		alternativa3d var renderOnly:ObjectList;		
+		alternativa3d var sceneRenderTarget:Texture;
+		alternativa3d var filterObjects:Boolean = false;
+		alternativa3d var enablePostAndInteractivity:Boolean = false;	
+		
+		// Copied from base
+		private var encDepthMaterial:EncodeDepthMaterial = new EncodeDepthMaterial();
+		private var decDepthEffect:OutputEffect = new OutputEffect();
+		private var ssaoBlur:SSAOBlur = new SSAOBlur();	
+		alternativa3d var depthTexture:Texture;
+		alternativa3d var ssaoTexture:Texture;
+		alternativa3d var bluredSSAOTexture:Texture;
+		private var effectTextureLog2Width:int = -1;
+		private var effectTextureLog2Height:int = -1;
+		private var _depthScale:int = 0;
+		override public function get depthScale():int {
+			return _depthScale;
+		}
+		override public function set depthScale(value:int):void {
+			if (depthTexture != null) {
+				depthTexture.dispose();
+				depthTexture = null;
+			}
+			_depthScale = (value > 0) ? value : 0;
+		}
+		private var rect:Rectangle = new Rectangle();
+		
+		public function RenderToTextureCamera(nearClipping:Number, farClipping:Number, enablePostAndInteractivity:Boolean = false)
 		{
 			super(nearClipping, farClipping);
+			this.enablePostAndInteractivity = enablePostAndInteractivity;
 		}
 		
-		/**
-		 * @inherit
-		 */
-		override public function render(stage3D:Stage3D):void {
+		override public function render(stage3D:Stage3D):void
+		{
 			if (ssaoScale < 0) ssaoScale = 0;
 			
 			var i:int;
@@ -78,26 +110,35 @@ package eu.nekobit.alternativa3d.core.cameras
 				calculateProjection(view._width, view._height);
 				// Preparing to rendering
 				view.configureContext3D(stage3D, context3D, this);
-				if (effectMode > 0) {
+				
+				// changed:
+				if(effectMode > 0 && enablePostAndInteractivity)
+				{
 					// update depth texture
-					/*var log2Width:int = Math.ceil(Math.log(view._width/effectRate)/Math.LN2) - ssaoScale;
+					var log2Width:int = Math.ceil(Math.log(view._width/effectRate)/Math.LN2) - ssaoScale;
 					var log2Height:int = Math.ceil(Math.log(view._height/effectRate)/Math.LN2) - ssaoScale;
 					log2Width = log2Width > 11 ? 11 : log2Width;
 					log2Height = log2Height > 11 ? 11 : log2Height;
 					if (effectTextureLog2Width != log2Width || effectTextureLog2Height != log2Height || depthTexture == null) {
 						if (depthTexture != null) depthTexture.dispose();
 						depthTexture = context3D.createTexture(1 << (log2Width - _depthScale), 1 << (log2Height - _depthScale), Context3DTextureFormat.BGRA, true);
+						
 						if (ssaoTexture != null) ssaoTexture.dispose();
 						ssaoTexture = context3D.createTexture(1 << log2Width, 1 << log2Height, Context3DTextureFormat.BGRA, true);
-						if (bluredSSAOTexture != null) bluredSSAOTexture.dispose();
-						bluredSSAOTexture = context3D.createTexture(1 << log2Width, 1 << log2Height, Context3DTextureFormat.BGRA, true);
+						
+						if(effectMode != DEPTH_FOR_CACHE)
+						{
+							if (bluredSSAOTexture != null) bluredSSAOTexture.dispose();
+							bluredSSAOTexture = context3D.createTexture(1 << log2Width, 1 << log2Height, Context3DTextureFormat.BGRA, true);
+						}
+						
 						effectTextureLog2Width = log2Width;
 						effectTextureLog2Height = log2Height;
 					}
 					encDepthMaterial.outputScaleX = view._width/(1 << (effectTextureLog2Width + ssaoScale));
 					encDepthMaterial.outputScaleY = view._height/(1 << (effectTextureLog2Height + ssaoScale));
 					encDepthMaterial.outputOffsetX = encDepthMaterial.outputScaleX - 1;
-					encDepthMaterial.outputOffsetY = 1 - encDepthMaterial.outputScaleY;*/
+					encDepthMaterial.outputOffsetY = 1 - encDepthMaterial.outputScaleY;
 				}
 				
 				// Transformations calculating
@@ -199,18 +240,21 @@ package eu.nekobit.alternativa3d.core.cameras
 					// Sort lights by types
 					if (lightsLength > 0) sortLights(0, lightsLength - 1);
 					
-					// todo: check
-					// Calculating the rays of mouse events
-					/*view.calculateRays(this, (globalMouseHandlingType & Object3D.MOUSE_HANDLING_MOVING) != 0,
-						(globalMouseHandlingType & Object3D.MOUSE_HANDLING_PRESSING) != 0,
-						(globalMouseHandlingType & Object3D.MOUSE_HANDLING_WHEEL) != 0,
-						(globalMouseHandlingType & Object3D.MOUSE_HANDLING_MIDDLE_BUTTON) != 0,
-						(globalMouseHandlingType & Object3D.MOUSE_HANDLING_RIGHT_BUTTON) != 0);
-					for (i = origins.length; i < view.raysLength; i++) {
-						origins[i] = new Vector3D();
-						directions[i] = new Vector3D();
+					// changed:
+					if(enablePostAndInteractivity)
+					{
+						// Calculating the rays of mouse events
+						view.calculateRays(this, (globalMouseHandlingType & Object3D.MOUSE_HANDLING_MOVING) != 0,
+							(globalMouseHandlingType & Object3D.MOUSE_HANDLING_PRESSING) != 0,
+							(globalMouseHandlingType & Object3D.MOUSE_HANDLING_WHEEL) != 0,
+							(globalMouseHandlingType & Object3D.MOUSE_HANDLING_MIDDLE_BUTTON) != 0,
+							(globalMouseHandlingType & Object3D.MOUSE_HANDLING_RIGHT_BUTTON) != 0);
+						for (i = origins.length; i < view.raysLength; i++) {
+							origins[i] = new Vector3D();
+							directions[i] = new Vector3D();
+						}
+						raysLength = view.raysLength;
 					}
-					raysLength = view.raysLength;*/
 					
 					var r:Number = ((view.backgroundColor >> 16) & 0xff)/0xff;
 					var g:Number = ((view.backgroundColor >> 8) & 0xff)/0xff;
@@ -221,10 +265,10 @@ package eu.nekobit.alternativa3d.core.cameras
 						b *= view.backgroundAlpha;
 					}
 					
-					// Set texture as render target
-					if(texture != null)
+					// changed:
+					if(!enablePostAndInteractivity && sceneRenderTarget != null)
 					{
-						context3D.setRenderToTexture(texture, true);
+						context3D.setRenderToTexture(sceneRenderTarget, true);
 					}
 					
 					context3D.clear(r, g, b, view.backgroundAlpha);
@@ -274,7 +318,7 @@ package eu.nekobit.alternativa3d.core.cameras
 								}
 							}
 							
-							// Filter
+							// changed: added filter
 							if(renderOnly != null && filterObjects)
 							{
 								if(!shouldRender(root))
@@ -284,9 +328,10 @@ package eu.nekobit.alternativa3d.core.cameras
 							}
 							
 							root.collectDraws(this, childLights, childLightsLength, root.useShadow);
-						} else {
-							
-							// Filter
+						} 
+						else
+						{
+							// changed: added filter
 							if(renderOnly != null && filterObjects)
 							{
 								if(!shouldRender(root))
@@ -297,14 +342,18 @@ package eu.nekobit.alternativa3d.core.cameras
 							
 							root.collectDraws(this, null, 0, root.useShadow);
 						}
-						/*if (effectMode > 0) {
+						
+						// changed:
+						if(effectMode > 0 && enablePostAndInteractivity)
+						{
 							root.collectDepthDraws(this, depthRenderer, encDepthMaterial);
-						}*/
+						}
+						
 						// Debug the boundbox
 						if (debug && root.boundBox != null && (checkInDebug(root) & Debug.BOUNDS)) Debug.drawBoundBox(this, root.boundBox, root.localToCameraTransform);
 					}
 					
-					// Filter
+					// changed: added filter
 					if(renderOnly != null && filterObjects)
 					{
 						filterChildren(root);
@@ -312,87 +361,57 @@ package eu.nekobit.alternativa3d.core.cameras
 					
 					// Gather the draws for children
 					root.collectChildrenDraws(this, lights, lightsLength, root.useShadow);
-					/*if (effectMode > 0) {
-						root.collectChildrenDepthDraws(this, depthRenderer, encDepthMaterial);
-					}*/
 					
-					// Mouse events processing
-					// todo: check
-					//view.processMouseEvents(context3D, this);
+					// changed:
+					if(effectMode > 0 && enablePostAndInteractivity)
+					{
+						root.collectChildrenDepthDraws(this, depthRenderer, encDepthMaterial);
+					}
+					
+					// changed:
+					if(enablePostAndInteractivity)
+					{
+						// Mouse events processing					
+						view.processMouseEvents(context3D, this);
+					}
+					
+					// changed: Set texture as render target
+					// Moved after mouse eventsprocessing as somehow setting render to texture breaks mouse event detection
+					if(enablePostAndInteractivity && sceneRenderTarget != null)
+					{
+						context3D.setRenderToTexture(sceneRenderTarget, true);
+						context3D.clear();
+					}
+						
 					// Render
 					renderer.render(context3D);
 					
+					// changed:
 					// TODO: separate render to texture and in backbuffer in two stages
-					// TODO: toggle off z-buffer
-					// TODO: toggle off culling
-					/*if (effectMode > 0) {
+					if(effectMode > 0 && enablePostAndInteractivity)
+					{
 						encDepthMaterial.useNormals = effectMode == 3 || effectMode == 8 || effectMode == 9;
 						
-						rect.width = view._width >> ssaoScale;
-						rect.height = view._height >> ssaoScale;
+						// TODO: subpixel accuracy check
+						rect.width = Math.ceil(view._width >> (_depthScale + ssaoScale));
+						rect.height = Math.ceil(view._height >> (_depthScale + ssaoScale));
 						context3D.setScissorRectangle(rect);
 						context3D.setRenderToTexture(depthTexture, true, 0, 0);
 						if (encDepthMaterial.useNormals) {
-							context3D.clear(1, 0, 0.5, 0.5);
+							//						context3D.clear(1, 0, 0.5, 0.5);
+							context3D.clear(1, 0, -1, 0.5);
 						} else {
 							context3D.clear(1, 0);
 						}
 						depthRenderer.render(context3D);
 						
+						context3D.setScissorRectangle(null);
+						
 						var visibleTexture:Texture = depthTexture;
 						var multiplyEnabled:Boolean = false;
-						if (effectMode == 4 || effectMode == 5) {
-							// TODO: use small quad instead of scissor
-							context3D.setRenderToTexture(ssaoTexture, true, 0, 0);
-							context3D.clear(0, 0);
-							ssaoEffect.scaleX = 1;
-							ssaoEffect.scaleY = 1;
-							ssaoEffect.width = 1 << effectTextureLog2Width;
-							ssaoEffect.height = 1 << effectTextureLog2Height;
-							ssaoEffect.depthTexture = depthTexture;
-							ssaoEffect.collectQuadDraw(this);
-							renderer.render(context3D);
-							
-							if (blurEnabled) {
-								context3D.setRenderToTexture(bluredSSAOTexture, true, 0, 0);
-								context3D.clear(0, 0);
-								ssaoBlur.width = 1 << effectTextureLog2Width;
-								ssaoBlur.height = 1 << effectTextureLog2Height;
-								//							ssaoBlur.depthTexture = depthTexture;
-								ssaoBlur.ssaoTexture = ssaoTexture;
-								ssaoBlur.collectQuadDraw(this);
-								renderer.render(context3D);
-							}
-							visibleTexture = blurEnabled ? bluredSSAOTexture : ssaoTexture;
-							multiplyEnabled = effectMode == 5;
-						}
-						if (effectMode == 6 || effectMode == 7) {
-							// apply ssao
-							
-							// TODO: use lower quad instead of scissor
-							context3D.setRenderToTexture(ssaoTexture, true, 0, 0);
-							context3D.clear(0, 0);
-							ssaoVolumetricEffect.scaleX = 1;
-							ssaoVolumetricEffect.scaleY = 1;
-							ssaoVolumetricEffect.depthTexture = depthTexture;
-							ssaoVolumetricEffect.collectQuadDraw(this);
-							renderer.render(context3D);
-							
-							if (blurEnabled) {
-								context3D.setRenderToTexture(bluredSSAOTexture, true, 0, 0);
-								context3D.clear(0, 0);
-								ssaoBlur.width = 1 << effectTextureLog2Width;
-								ssaoBlur.height = 1 << effectTextureLog2Height;
-								//							ssaoBlur.depthTexture = depthTexture;
-								ssaoBlur.ssaoTexture = ssaoTexture;
-								ssaoBlur.collectQuadDraw(this);
-								renderer.render(context3D);
-							}
-							visibleTexture = blurEnabled ? bluredSSAOTexture : ssaoTexture;
-							multiplyEnabled = effectMode == 7;
-						}
-						if (effectMode == 8 || effectMode == 9) {
-							// TODO: use small quad instead of scissor
+						
+						if (effectMode == MODE_SSAO_COLOR || effectMode == MODE_SSAO_ONLY) {
+							// Draw ssao
 							context3D.setRenderToTexture(ssaoTexture, true, 0, 0);
 							context3D.clear(0, 0);
 							ssaoAngular.depthScaleX = 1;
@@ -401,56 +420,81 @@ package eu.nekobit.alternativa3d.core.cameras
 							ssaoAngular.height = 1 << effectTextureLog2Height;
 							ssaoAngular.uToViewX = (1 << (effectTextureLog2Width + ssaoScale));
 							ssaoAngular.vToViewY = (1 << (effectTextureLog2Height + ssaoScale));
+							ssaoAngular.clipSizeX = view._width/ssaoAngular.uToViewX;
+							ssaoAngular.clipSizeY = view._height/ssaoAngular.vToViewY;
 							ssaoAngular.depthNormalsTexture = depthTexture;
 							ssaoAngular.collectQuadDraw(this);
 							renderer.render(context3D);
 							
 							if (blurEnabled) {
+								// Apply blur
+								// TODO: draw blur directly to Context3D
 								context3D.setRenderToTexture(bluredSSAOTexture, true, 0, 0);
 								context3D.clear(0, 0);
 								ssaoBlur.width = 1 << effectTextureLog2Width;
 								ssaoBlur.height = 1 << effectTextureLog2Height;
-								//							ssaoBlur.depthTexture = depthTexture;
+								ssaoBlur.clipSizeX = ssaoAngular.clipSizeX;
+								ssaoBlur.clipSizeY = ssaoAngular.clipSizeY;
 								ssaoBlur.ssaoTexture = ssaoTexture;
 								ssaoBlur.collectQuadDraw(this);
 								renderer.render(context3D);
 							}
 							visibleTexture = blurEnabled ? bluredSSAOTexture : ssaoTexture;
 							multiplyEnabled = effectMode == 9;
-						}
+						}						
+						
+						// changed: Set texture as render target
 						// render quad to screen
-						context3D.setRenderToBackBuffer();
-						context3D.setScissorRectangle(null);
-						decDepthEffect.multiplyBlend = multiplyEnabled;
-						if (effectMode <= 3) {
-							decDepthEffect.scaleX = encDepthMaterial.outputScaleX;
-							decDepthEffect.scaleY = encDepthMaterial.outputScaleY;
-						} else {
-							decDepthEffect.scaleX = encDepthMaterial.outputScaleX;
-							decDepthEffect.scaleY = encDepthMaterial.outputScaleY;
+						if(sceneRenderTarget != null)
+						{
+							//context3D.setRenderToTexture(sceneRenderTarget, true);	
+							//context3D.clear();
 						}
+						else
+						{							
+							context3D.setRenderToBackBuffer();
+						}
+						
+						decDepthEffect.multiplyBlend = multiplyEnabled;
+						decDepthEffect.scaleX = encDepthMaterial.outputScaleX;
+						decDepthEffect.scaleY = encDepthMaterial.outputScaleY;
 						decDepthEffect.depthTexture = visibleTexture;
 						if (ssaoScale != 0) {
 							decDepthEffect.mode = effectMode > 3 ? 4 : effectMode;
 						} else {
 							decDepthEffect.mode = effectMode > 3 ? 0 : effectMode;
 						}
-						decDepthEffect.collectQuadDraw(this);
-						renderer.render(context3D);
-					}*/
+						
+						if(effectMode == DEPTH_FOR_CACHE)
+						{
+							context3D.setRenderToTexture(ssaoTexture);
+							context3D.clear();
+							decDepthEffect.collectQuadDraw(this);					
+							renderer.render(context3D);
+						}
+					}
 				}
-				// Output
-				if (view._canvas == null) {
-					context3D.present();
-				} else {
-					context3D.drawToBitmapData(view._canvas);
-					context3D.present();
-				}
+				
+				if(sceneRenderTarget == null)
+				{
+					// Output
+					if (view._canvas == null) {
+						context3D.present();
+					} else {
+						context3D.drawToBitmapData(view._canvas);
+						context3D.present();
+					}
+				}		
 			}
 			// Clearing
 			lights.length = 0;
 			childLights.length = 0;
 			occluders.length = 0;
+		}
+		
+		alternativa3d function handleMouse():void
+		{
+			
 		}
 		
 		/**
@@ -474,7 +518,7 @@ package eu.nekobit.alternativa3d.core.cameras
 		}
 		
 		/**
-		 * Allow render only objects that are in renderonly list.
+		 * Allow render only objects that are in renderOnly list.
 		 */
 		private function filterChildren(root:Object3D):void
 		{

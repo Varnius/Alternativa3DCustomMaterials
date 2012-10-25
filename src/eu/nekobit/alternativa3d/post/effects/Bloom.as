@@ -24,13 +24,14 @@ package eu.nekobit.alternativa3d.post.effects
 	 * 
 	 * @author Varnius
 	 */
-	public class DepthOfField extends BlurBase
+	public class Bloom extends BlurBase
 	{
 		// Cache	
 		private static var programCache:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;
+		private var thresholdProgram:ShaderProgram;
 		private var finalProgram:ShaderProgram;
-
+		
 		/**
 		 * @private
 		 */
@@ -51,31 +52,41 @@ package eu.nekobit.alternativa3d.post.effects
 		 */
 		alternativa3d var renderTarget4:Texture;
 		
-		/**
-		 * @private
-		 */
-		alternativa3d var renderTarget5:Texture;
-		
 		private var prevPrerenderTexWidth:int = 0;
 		private var prevPrerenderTexHeight:int = 0;
-		private var DOFConstants:Vector.<Number> = new <Number>[0, 0, 0, 0];
+		private var constant:Vector.<Number> = new <Number>[0, 0, 0, 0];
 		
 		/**
-		 * Distance.
+		 * Color threshold.
 		 */
-		public var distance:Number = 0.0;
+		public var threshold:Number = 0.3;
 		
 		/**
-		 * Range.
+		 * Saturation of original scene.
 		 */
-		public var range:Number = 0.2;
+		public var sourceSaturation:Number = 1.0;
 		
-		public function DepthOfField()
+		/**
+		 * Saturation of bloom.
+		 */
+		public var bloomSaturation:Number = 1.3;
+		
+		/**
+		 * Blend maount of original scene.
+		 */
+		public var sourceIntensity:Number = 1.0;
+		
+		/**
+		 * Blend amount of bloom.
+		 */
+		public var bloomIntensity:Number = 1.0;
+		
+		public function Bloom()
 		{
-			blendMode = EffectBlendMode.ALPHA;
+			blendMode = EffectBlendMode.NONE;
 			overlay.effect = this;
-			needsScene = needsDepth = true;
-			blurX = blurY = 0.4;
+			needsScene = true;
+			needsOverlay = false;
 		}
 		
 		/**
@@ -88,7 +99,7 @@ package eu.nekobit.alternativa3d.post.effects
 			if(camera == null || stage3D == null)
 			{
 				return;
-			}			
+			}
 			
 			/*-------------------
 			Update cache
@@ -109,11 +120,13 @@ package eu.nekobit.alternativa3d.post.effects
 					programCache[cachedContext3D] = programs;
 					
 					finalProgram = getFinalProgram();
+					thresholdProgram = getThresholdProgram();
 					finalProgram.upload(cachedContext3D);
+					thresholdProgram.upload(cachedContext3D);					
 					
 					programs["FinalProgram"] = finalProgram;
 				}
-				else 
+				else
 				{
 					finalProgram = programs["FinalProgram"];
 				}
@@ -124,62 +137,97 @@ package eu.nekobit.alternativa3d.post.effects
 			// Handle render target textures
 			if(contextJustUpdated || prevPrerenderTexWidth != prerenderTextureWidth || prevPrerenderTexHeight != prerenderTextureHeight)
 			{
-				renderTarget1 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
+				renderTarget1 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);				
 				renderTarget2 = cachedContext3D.createTexture(prerenderTextureWidth / 2, prerenderTextureHeight / 2, Context3DTextureFormat.BGRA, true);
 				renderTarget3 = cachedContext3D.createTexture(prerenderTextureWidth / 4, prerenderTextureHeight / 4, Context3DTextureFormat.BGRA, true);
 				renderTarget4 = cachedContext3D.createTexture(prerenderTextureWidth / 4, prerenderTextureHeight / 4, Context3DTextureFormat.BGRA, true);
-				renderTarget5 = cachedContext3D.createTexture(prerenderTextureWidth, prerenderTextureHeight, Context3DTextureFormat.BGRA, true);
 				
 				prevPrerenderTexWidth = prerenderTextureWidth;
 				prevPrerenderTexHeight = prerenderTextureHeight;
 				contextJustUpdated = false;
-			}
+			}			
+			
+			/*-------------------
+			Render scene with
+			color threshold
+			-------------------*/
+			
+			// Set attributes
+			cachedContext3D.setVertexBufferAt(0, postRenderer.overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
+			cachedContext3D.setVertexBufferAt(1, postRenderer.overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);				
+			
+			constant[0] = threshold;
+			constant[3] = 1 - threshold;
+			
+			// Set constants
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, constant, 1);
+			
+			// Set samplers
+			cachedContext3D.setTextureAt(0, postRenderer.cachedScene);
+			
+			// Set program
+			cachedContext3D.setProgram(thresholdProgram.program);
+			
+			// Render
+			cachedContext3D.setRenderToTexture(renderTarget1);
+			cachedContext3D.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ZERO);
+			cachedContext3D.clear();
+			
+			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);			
+			cachedContext3D.present();
 			
 			/*-------------------
 			Downsample scene			
 			-------------------*/		
-			
-			resample(postRenderer.cachedScene, renderTarget2);
+						
+			resample(renderTarget1, renderTarget2);
 			resample(renderTarget2, renderTarget3);	
-		
+			
 			/*-------------------
-			Blur regular scene
-			-------------------*/			
+			Blur downsampled scene			
+			-------------------*/
 			
 			blur(renderTarget3, renderTarget4, prerenderTextureWidth / 4, prerenderTextureHeight / 4);
 			
 			/*-------------------
-			Upsample scene			
-			-------------------*/		
+			Upsample
+			-------------------*/
 			
 			resample(renderTarget3, renderTarget2);
 			resample(renderTarget2, renderTarget1);
 			
 			/*-------------------
 			Render final view
-			-------------------*/			
+			-------------------*/
 			
 			// Set attributes
 			cachedContext3D.setVertexBufferAt(0, postRenderer.overlayVertexBuffer, 0, Context3DVertexBufferFormat.FLOAT_3);
 			cachedContext3D.setVertexBufferAt(1, postRenderer.overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);			
 			
-			DOFConstants[0] = camera.farClipping / (camera.farClipping - camera.nearClipping);
-			DOFConstants[1] = camera.nearClipping * DOFConstants[0];			
-			DOFConstants[2] = distance;
-			DOFConstants[3] = range;
+			// Set constants 			
+			constant[0] = sourceIntensity;
+			constant[1] = bloomIntensity;
+			constant[2] = sourceSaturation;
+			constant[3] = bloomSaturation;			
 			
-			// Set constants 
-			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, DOFConstants, 1);			
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, constant, 1);
+			
+			constant[0] = 0.3;
+			constant[1] = 0.59;
+			constant[2] = 0.11;
+			constant[3] = 1.0;
+			
+			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 1, constant, 1);
 			
 			// Set samplers
-			cachedContext3D.setTextureAt(0, postRenderer.cachedDepthMap);
+			cachedContext3D.setTextureAt(0, postRenderer.cachedScene);
 			cachedContext3D.setTextureAt(1, renderTarget1);		
 			
 			// Set program
 			cachedContext3D.setProgram(finalProgram.program);			
 			
-			// Render final scene
-			cachedContext3D.setRenderToTexture(renderTarget5);
+			// Combine
+			cachedContext3D.setRenderToTexture(postRenderer.cachedSceneTmp);
 			cachedContext3D.setBlendFactors(Context3DBlendFactor.ONE, Context3DBlendFactor.ZERO);
 			cachedContext3D.clear();			
 			cachedContext3D.drawTriangles(postRenderer.overlayIndexBuffer);				
@@ -191,8 +239,10 @@ package eu.nekobit.alternativa3d.post.effects
 			cachedContext3D.setTextureAt(0, null);
 			cachedContext3D.setTextureAt(1, null);
 			
-			// Pass changes to overlay
-			overlay.diffuseMap = renderTarget5;
+			// Swap render targets in postRenderer
+			var tmp:Texture = postRenderer.cachedScene;
+			postRenderer.cachedScene = postRenderer.cachedSceneTmp;
+			postRenderer.cachedSceneTmp = tmp;
 		}
 		
 		/**
@@ -200,13 +250,12 @@ package eu.nekobit.alternativa3d.post.effects
 		 */
 		override alternativa3d function dispose():void
 		{
-			if(renderTarget1)
+			if(renderTarget1 != null)
 			{
-				renderTarget1.dispose();
+				renderTarget1.dispose();			
 				renderTarget2.dispose();
 				renderTarget3.dispose();
 				renderTarget4.dispose();
-				renderTarget5.dispose();
 			}
 		}
 		
@@ -226,10 +275,25 @@ package eu.nekobit.alternativa3d.post.effects
 			return new ShaderProgram(vertexLinker, fragmentLinker);
 		}
 		
+		private function getThresholdProgram():ShaderProgram
+		{
+			var vertexLinker:Linker = new Linker(Context3DProgramType.VERTEX);
+			var fragmentLinker:Linker = new Linker(Context3DProgramType.FRAGMENT);
+			
+			vertexLinker.addProcedure(thresholdVertexProcedure);
+			fragmentLinker.addProcedure(thresholdFragmentProcedure);
+			fragmentLinker.varyings = vertexLinker.varyings;
+			
+			return new ShaderProgram(vertexLinker, fragmentLinker);
+		}
+		
 		/*---------------------------
 		Final render program
 		---------------------------*/
 		
+		/**
+		 * @private
+		 */
 		static alternativa3d const finalVertexProcedure:Procedure = new Procedure(
 		[
 			// Declarations
@@ -243,40 +307,99 @@ package eu.nekobit.alternativa3d.post.effects
 			"mov o0 a0"			
 		], "FinalVertex");
 		
+		/**
+		 * @private
+		 */
 		static alternativa3d const finalFragmentProcedure:Procedure = new Procedure(
 		[
 			// Declarations
-			"#s0=sDepthMap",
-			"#s1=sBlurredScene",
-			// c0.xyzw = far/ (-Near * Far)/distance/range
-			"#c0=cConstants",
+			"#s0=sRegularScene",
+			"#s1=sThresholdScene",
+			"#c0=cParams",
+			"#c1=cColor",
 			"#v0=vUV",
 			
-			// Sample depth map
-			"tex t0,v0,s0 <2d,clamp,linear>",
-			// Sample blurred scene
+			// Sample regular scene
+			"tex t0,v0,s0 <2d,clamp,linear>",			
+			// Sample threshol scene
 			"tex t1,v0,s1 <2d,clamp,linear>",
 			
-			// Calculate blur factor
+			// Adjust regular scene color saturation
+			"dp3 t2.xyz t0.xyz c1.xyz",
+			// lerp: x + s * (y - x)
+			"sub t3.xyz t0.xyz t2.xyz",
+			"mul t3.xyz t3.xyz c0.zzz",
+			"add t0.xyz t2.xyz t3.xyz",
 			
-			// fDepth - Far
-			//"sub t0.x t0.x c0.x",
-			// fSceneZ = (-Near * Far) / (fDepth - Far)
-			//"div t0.x c0.y t0.x",
-			// fSceneZ - Distance,
-			"sub t0.x t0.x c0.z",
-			// div
-			"div t0.x t0.x c0.w",
-			// Get absolute value
-			"abs t0.x t0.x",
-			// Clamp value in range [0, 1]
-			"sat t0.x t0.x",
+			// Adjust threshold scene color saturation
+			"dp3 t2.xyz t1.xyz c1.xyz",
+			// lerp: x + s * (y - x)
+			"sub t3.xyz t1.xyz t2.xyz",
+			"mul t3.xyz t3.xyz c0.www",
+			"add t1.xyz t2.xyz t3.xyz",
 			
-			// Use blur factor as final color alpha
-			"mov t1.w t0.x",
+			// Adjust color intensity
+			"mul t0.xyz t0.xyz c0.x",
+			"mul t1.xyz t1.xyz c0.y",
+			
+			// 1 - saturate(bloomColor)
+			"sat t2.xyz t1.xyz",
+			"sub t2.xyz c1.www t2.xyz",			
+			
+			// Darken original scene where bloom is bright
+			"mul t0.xyz t0.xyz t2.xyz",
+			
+			// Add both samples
+			"add t0 t0 t1",
+			"mov t0.w c1.w",
 			
 			// Return final color
-			"mov o0 t1",
+			"mov o0 t0",
 		], "FinalFragment");
+		
+		/*---------------------------
+		Final render program
+		---------------------------*/
+		
+		/**
+		 * @private
+		 */
+		static alternativa3d const thresholdVertexProcedure:Procedure = new Procedure(
+		[
+			// Declarations
+			"#a0=aPosition",			
+			"#a1=aUV",
+			"#v0=vUV",
+			
+			// Move UV coords to varying-0
+			"mov v0 a1",
+			// Set vertex position as output
+			"mov o0 a0"			
+		], "ThresholdVertex");
+		
+		/**
+		 * @private
+		 */
+		static alternativa3d const thresholdFragmentProcedure:Procedure = new Procedure(
+		[
+			// Declarations
+			"#s0=sRegularScene",
+			// x = Threshold, w = 1 - Threshold
+			"#c0=cThreshold",
+			"#v0=vUV",
+			
+			// Formula: saturate((Color – Threshold) / (1 – Threshold))			
+			// Get color
+			"tex t0,v0,s0 <2d,clamp,linear>",
+			// Color - Threshold
+			"sub t0.xyz t0.xyz c0.xxx",
+			// (Color – Threshold) / (1 – Threshold)
+			"mul t0.xyz t0.xyz c0.www",
+			// Saturate
+			"sat t0 t0",
+			
+			// Return final color
+			"mov o0 t0",
+		], "ThresholdFragment");
 	}
 }
