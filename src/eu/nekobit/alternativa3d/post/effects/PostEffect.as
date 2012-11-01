@@ -31,7 +31,7 @@ package eu.nekobit.alternativa3d.post.effects
 		private static var programCache:Dictionary = new Dictionary(true);
 		private var cachedContext3D:Context3D;
 		private var resampleProgram:ShaderProgram;
-		private var _enabled:Boolean = true;
+		protected var _enabled:Boolean = true;
 		
 		/**
 		 * @private
@@ -106,7 +106,7 @@ package eu.nekobit.alternativa3d.post.effects
 		 */
 		alternativa3d function update(stage3D:Stage3D, camera:Camera3D):void
 		{
-			if(camera == null || stage3D == null)
+			if(camera == null || stage3D == null || !_enabled)
 			{
 				return;
 			}			
@@ -267,7 +267,7 @@ package eu.nekobit.alternativa3d.post.effects
 		{
 			return _enabled;
 		}
-		public function setenabled(value:Boolean):void
+		public function set enabled(value:Boolean):void
 		{
 			_enabled = value;
 		}

@@ -125,10 +125,12 @@ package eu.nekobit.alternativa3d.post.effects
 					thresholdProgram.upload(cachedContext3D);					
 					
 					programs["FinalProgram"] = finalProgram;
+					programs["ThresholdProgram"] = thresholdProgram;
 				}
 				else
 				{
 					finalProgram = programs["FinalProgram"];
+					thresholdProgram = programs["ThresholdProgram"];
 				}
 				
 				contextJustUpdated = true;
@@ -358,7 +360,7 @@ package eu.nekobit.alternativa3d.post.effects
 		], "FinalFragment");
 		
 		/*---------------------------
-		Final render program
+		Threshold program
 		---------------------------*/
 		
 		/**
