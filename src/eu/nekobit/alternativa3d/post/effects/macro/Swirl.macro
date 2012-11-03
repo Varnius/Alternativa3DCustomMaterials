@@ -1,0 +1,63 @@
+
+	/*--------------------------
+	Vertex shader
+	--------------------------*/
+	
+	// Move uvs to varying
+	v0 = va1;
+	
+	// Output vertex position
+	op = va0;
+	
+	####
+	
+	/*--------------------------
+	Fragment shader
+	--------------------------*/
+	
+	// params = 5.0, 6.0, amount
+	// texSize = texWidth, texheight
+	
+	// Aliases
+	
+	alias fc0, params;
+	alias fc1, texSize;
+	alias v0, uv; 
+	
+	// Macros
+	
+	macro cos(src)
+	{
+		cos out, src;
+	}
+		
+	// Unpack UV coords from [0, 1] to [0, texSize]
+	ft0.x = uv.x * texSize.x;
+	ft0.y = uv.y * texSize.y;
+	
+	// float nx = 5.0 * (cos(pos.y / 5.0));
+	ft1.x = ft0.y / params.x;
+	ft1.x = cos(ft1.x);
+	ft1.x *= params.z;
+	
+	// float ny = 5.0 * (cos(pos.x / 6.0));
+	ft1.y = ft0.x / params.y;
+	ft1.y = cos(ft1.y);
+	ft1.y *= params.z;
+	
+	// float2 pnt = float2(nx*ny , nx*ny );
+	ft1.zw = ft1.xx * ft1.yy;
+	
+	// pnt * amount
+	ft1.zw *= params.ww;
+			
+	// outCoord() + pnt * amount
+	ft0.xy += ft1.zw;
+	
+	// Scale corrds back to [0, 1]
+	ft0.xy /= texSize.xy;
+	
+	// Sample image at calculated coords	
+	ft1 = tex<2d,clamp,linear,nomip>(ft0.xy, fs0);
+	oc = ft1;
+	

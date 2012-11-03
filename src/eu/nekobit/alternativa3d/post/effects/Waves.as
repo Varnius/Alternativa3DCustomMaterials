@@ -36,6 +36,10 @@ package eu.nekobit.alternativa3d.post.effects
 		private var prevPrerenderTexHeight:int = 0;
 		private var constant:Vector.<Number> = new <Number>[0, 0, 0, 0];
 		
+		public var frequencyX:Number = 30;
+		public var frequencyY:Number = 20;
+		public var amount:Number = 0.2
+		
 		public function Waves()
 		{
 			blendMode = EffectBlendMode.NONE;
@@ -95,10 +99,10 @@ package eu.nekobit.alternativa3d.post.effects
 			cachedContext3D.setVertexBufferAt(1, postRenderer.overlayVertexBuffer, 3, Context3DVertexBufferFormat.FLOAT_2);			
 			
 			// Set constants			
-			constant[0] = 30;
-			constant[1] = 20;	
+			constant[0] = frequencyX;
+			constant[1] = frequencyY;	
 			constant[2] = 5;
-			constant[3] = 0.2;
+			constant[3] = amount;
 			 			
 			cachedContext3D.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 0, constant, 1);	
 			
