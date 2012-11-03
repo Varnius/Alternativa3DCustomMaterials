@@ -14,6 +14,6 @@ Demos:
 	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/water/water.html" title="Water material"><img src="http://nekobit.puslapiai.lt/screens/water-material0.png"/></a>
 	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/refractive/refractive.html" title="Refractive material"><img src="http://nekobit.puslapiai.lt/screens/refractive-material0.png"/></a>
 	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/fxaa-console/FXAADemo.html" title="FXAA"><img src="http://nekobit.puslapiai.lt/screens/fxaa-console0.png"/></a>
-	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/fxaa-console/WavesDemo.html" title="FXAA"><img src="http://nekobit.puslapiai.lt/screens/wavy-scene0.png"/></a>
+	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/waves/WavesDemo.html" title="FXAA"><img src="http://nekobit.puslapiai.lt/screens/wavy-scene0.png"/></a>
 
 </div>
