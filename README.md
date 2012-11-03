@@ -2,6 +2,8 @@ Alternativa3DCustomMaterials
 ============================
 
 Custom materials for Alternativa3D. More info available at my blog: www.nekobit.eu
+<br />
+Requires GraphicsCoreLib, you can clone it from <a href="https://github.com/graphicscore/graphicscorelib">github</a>.
 
 Demos:
 
