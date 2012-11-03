@@ -3,7 +3,7 @@ Alternativa3DCustomMaterials
 
 Custom materials for Alternativa3D. More info available at my blog: www.nekobit.eu
 
-Demos (hover over the image to see effect name):
+Demos:
 
 <div>
 		
@@ -13,5 +13,6 @@ Demos (hover over the image to see effect name):
 	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/mapped-glow/index.html" title="Mapped glow"><img src="http://nekobit.puslapiai.lt/screens/mapped-glow.png"/></a>
 	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/water/water.html" title="Water material"><img src="http://nekobit.puslapiai.lt/screens/water-material.png"/></a>
 	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/refractive/refractive.html" title="Refractive material"><img src="http://nekobit.puslapiai.lt/screens/refractive-material.png"/></a>
-
+	<a target="_blank" href="http://nekobit.puslapiai.lt/demos/fxaa-console/FXAADemo.html" title="FXAA"><img src="http://nekobit.puslapiai.lt/screens/fxaa-console.png"/></a>
+	
 </div>
