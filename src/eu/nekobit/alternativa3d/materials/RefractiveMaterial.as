@@ -405,7 +405,7 @@ package eu.nekobit.alternativa3d.materials
 			// Blending mode that results in: dest.rgba * (1,1,1,0)
 			drawUnit.blendSource = Context3DBlendFactor.ZERO;
 			drawUnit.blendDestination = Context3DBlendFactor.SOURCE_COLOR;
-			camera.renderer.addDrawUnit(drawUnit, objectRenderPriority >= 0 ? objectRenderPriority : Renderer.OPAQUE);
+			camera.renderer.addDrawUnit(drawUnit, Renderer.DECALS/*objectRenderPriority >= 0 ? objectRenderPriority : Renderer.OPAQUE*/);
 		}
 		
 		/*---------------------------
