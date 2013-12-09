@@ -1,5 +1,5 @@
-Alternativa3DCustomMaterials
-============================
+Alternativa3D custom materials and post effects
+===============================================
 
 Custom materials for Alternativa3D. More info available at my blog: www.nekobit.eu
 <br />
