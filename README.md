@@ -3,7 +3,7 @@ Alternativa3D custom materials and post effects
 
 Custom materials for Alternativa3D. More info available at my blog: www.nekobit.eu
 <br />
-Requires GraphicsCoreLib, you can clone it from <a href="https://github.com/graphicscore/graphicscorelib">github</a>.
+Requires GraphicsCoreLib, you can clone it from <a href="https://github.com/thibaultimbert/graphicscorelib">here</a>.
 
 Demos:
 
